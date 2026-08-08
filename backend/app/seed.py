@@ -96,6 +96,14 @@ def get_seed_mission() -> Mission:
     identical objects (same IDs, values, and timestamps).
     """
     route = MissionRoute(waypoints=list(_ORIGINAL_WAYPOINTS))
+    # Create a fresh audit trail list each time
+    seed_audit = AuditEvent(
+        event_id="audit-seed-001",
+        event_type="mission.initialized",
+        description="Mission scenario loaded from seed data.",
+        timestamp=datetime(2026, 8, 6, 0, 0, 0, tzinfo=UTC),
+        metadata={"mission_id": MISSION_ID},
+    )
     return Mission(
         mission_id=MISSION_ID,
         label=MISSION_LABEL,
@@ -106,5 +114,5 @@ def get_seed_mission() -> Mission:
         active_route=MissionRoute(waypoints=list(_ORIGINAL_WAYPOINTS)),
         candidate_plans=[],
         anomaly_active=False,
-        audit_trail=[_SEED_AUDIT_EVENT],
+        audit_trail=[seed_audit],
     )

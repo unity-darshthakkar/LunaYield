@@ -1,6 +1,72 @@
+"""LunaYield Mission Lab — FastAPI application."""
+
+from __future__ import annotations
+
+import asyncio
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 
-from app.routers import health
+from app.routers import health, mission, planning, ws
+from app.services.mission import MissionService
+from app.services.planning import PlanningService
+from app.services.safety import SafetyVerifier
+from app.services.telemetry import TelemetryService
+from app.ws_manager import WSConnectionManager
+
+
+async def telemetry_loop(
+    telemetry_service: TelemetryService,
+    ws_manager: WSConnectionManager,
+) -> None:
+    """Background telemetry emission loop.
+
+    Runs approximately every 2 seconds while mission is RUNNING or EXECUTING.
+    """
+    try:
+        while True:
+            sample = telemetry_service.generate_sample()
+            if sample is not None:
+                await ws_manager.broadcast("telemetry.updated", sample.model_dump())
+            await asyncio.sleep(2.0)
+    except asyncio.CancelledError:
+        # Clean shutdown
+        pass
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Application lifespan handler for startup and shutdown."""
+    # Startup: create shared service instances
+    mission_service = MissionService()
+    planning_service = PlanningService()
+    safety_verifier = SafetyVerifier()
+    telemetry_service = TelemetryService(mission_service)
+    ws_manager = WSConnectionManager()
+
+    # Set up dependencies
+    mission_service.set_dependencies(safety_verifier, planning_service)
+
+    # Store in app state for router access
+    app.state.mission_service = mission_service
+    app.state.planning_service = planning_service
+    app.state.safety_verifier = safety_verifier
+    app.state.telemetry_service = telemetry_service
+    app.state.ws_manager = ws_manager
+
+    # Start telemetry background task
+    telemetry_task = asyncio.create_task(telemetry_loop(telemetry_service, ws_manager))
+    app.state.telemetry_task = telemetry_task
+
+    yield
+
+    # Shutdown: cancel telemetry task
+    if telemetry_task is not None:
+        telemetry_task.cancel()
+        try:
+            await telemetry_task
+        except asyncio.CancelledError:
+            pass
 
 
 def create_app() -> FastAPI:
@@ -8,8 +74,13 @@ def create_app() -> FastAPI:
         title="LunaYield Mission Lab",
         version="1.0.0",
         description="Lunar rover operations and mission-planning platform.",
+        lifespan=lifespan,
     )
     application.include_router(health.router)
+    application.include_router(mission.mission_router)
+    application.include_router(mission.scenario_router)
+    application.include_router(planning.router)
+    application.include_router(ws.router)
     return application
 
 
