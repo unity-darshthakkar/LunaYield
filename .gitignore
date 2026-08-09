@@ -55,3 +55,6 @@ preprocessing/output/
 # Test artifacts
 playwright-report/
 test-results/
+
+# Python package metadata
+*.egg-info/
