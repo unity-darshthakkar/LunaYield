@@ -98,14 +98,15 @@ describe('MissionControls', () => {
     expect(defaultProps.onPause).toHaveBeenCalledTimes(1);
   });
 
-  it('shows anomaly warning when anomalyActive is true', () => {
+  it('shows anomaly warning when anomalyActive is true in ANOMALY state', () => {
     render(
       <MissionControls {...defaultProps} missionStatus="ANOMALY" anomalyActive={true} />
     );
     expect(screen.getByText(/BATTERY ANOMALY ACTIVE/i)).toBeInTheDocument();
+    expect(screen.getByText(/Generate recovery plans/i)).toBeInTheDocument();
   });
 
-  it('shows candidate plans count when available', () => {
+  it('shows candidate plans count when in AWAITING_APPROVAL with plans', () => {
     render(
       <MissionControls
         {...defaultProps}
@@ -114,6 +115,44 @@ describe('MissionControls', () => {
       />
     );
     expect(screen.getByText(/3 CANDIDATE PLAN\(S\) AVAILABLE/i)).toBeInTheDocument();
+    expect(screen.getByText(/Review and approve/i)).toBeInTheDocument();
+  });
+
+  it('AWAITING_APPROVAL does not show Generate recovery plans banner', () => {
+    render(
+      <MissionControls
+        {...defaultProps}
+        missionStatus="AWAITING_APPROVAL"
+        anomalyActive={true}
+        candidatePlansCount={3}
+      />
+    );
+    expect(screen.queryByText(/Generate recovery plans/i)).not.toBeInTheDocument();
+  });
+
+  it('EXECUTING with anomalyActive shows Recovery plan executing and hides stale banners', () => {
+    render(
+      <MissionControls
+        {...defaultProps}
+        missionStatus="EXECUTING"
+        anomalyActive={true}
+        candidatePlansCount={3}
+      />
+    );
+    expect(screen.getByText(/Recovery plan executing/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Generate recovery plans/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Review and approve/i)).not.toBeInTheDocument();
+  });
+
+  it('EXECUTING without anomalyActive does not claim Battery Anomaly Active', () => {
+    render(
+      <MissionControls
+        {...defaultProps}
+        missionStatus="EXECUTING"
+        anomalyActive={false}
+      />
+    );
+    expect(screen.queryByText(/BATTERY ANOMALY ACTIVE/i)).not.toBeInTheDocument();
   });
 
   it('displays error message when provided', () => {

@@ -6,6 +6,7 @@ import { clsx } from 'clsx';
 interface RoutePanelProps {
   activeRoute: MissionRoute | undefined;
   originalRoute: MissionRoute | undefined;
+  approvedPlanLabel?: string;
   className?: string;
 }
 
@@ -49,6 +50,7 @@ function WaypointItem({
 export function RoutePanel({
   activeRoute,
   originalRoute,
+  approvedPlanLabel,
   className = '',
 }: RoutePanelProps) {
   const route = activeRoute ?? originalRoute;
@@ -71,6 +73,11 @@ export function RoutePanel({
           ({route.waypoints.length} waypoints)
         </span>
       </h3>
+      {approvedPlanLabel && (
+        <div className="text-[10px] text-gray-400 font-mono mb-2">
+          Approved plan: {approvedPlanLabel}
+        </div>
+      )}
       <div className="space-y-4">
         {route.waypoints.map((waypoint, index) => (
           <WaypointItem

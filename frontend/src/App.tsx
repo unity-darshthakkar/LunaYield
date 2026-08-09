@@ -30,6 +30,7 @@ import {
   MissionControls,
 } from './components';
 import type { TelemetrySample } from './types/mission';
+import { PlanStatus } from './types/mission';
 
 function MissionControl() {
   // Mission state queries
@@ -41,6 +42,9 @@ function MissionControl() {
   const activeRoute = useActiveRoute();
   const originalRoute = useOriginalRoute();
   const anomalyActive = useAnomalyActive();
+
+  // Find approved plan label from backend-provided candidate plans
+  const approvedPlanLabel = candidatePlans.find((p) => p.status === PlanStatus.APPROVED)?.label;
 
   // Live telemetry state (updated via WebSocket only)
   const [liveTelemetry, setLiveTelemetry] = useState<TelemetrySample | null>(null);
@@ -149,6 +153,7 @@ function MissionControl() {
               <RoutePanel
                 activeRoute={activeRoute}
                 originalRoute={originalRoute}
+                approvedPlanLabel={approvedPlanLabel}
               />
             </div>
 
@@ -194,7 +199,7 @@ function MissionControl() {
           {/* Footer */}
           <div className="mt-6 pt-4 border-t border-gray-800 text-center">
             <p className="text-xs text-gray-500 font-mono">
-              LunaYield Mission Lab - Phase 1C Demo
+              LunaYield Mission Lab - Phase 1 Demo
               {' | '}
               <span className="text-yellow-500">BACKEND AUTHORITATIVE</span>
             </p>

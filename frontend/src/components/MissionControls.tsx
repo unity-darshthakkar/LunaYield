@@ -178,14 +178,19 @@ export function MissionControls({
             AWAITING APPROVAL
           </div>
         </div>
-        {anomalyActive && (
+        {anomalyActive && isAnomaly && (
           <div className="mt-2 p-2 bg-orange-900/30 border border-orange-800 rounded text-orange-300 font-mono text-[10px]">
             ⚠ BATTERY ANOMALY ACTIVE — Generate recovery plans
           </div>
         )}
-        {candidatePlansCount > 0 && (
+        {isAwaitingApproval && candidatePlansCount > 0 && (
           <div className="mt-2 p-2 bg-purple-900/30 border border-purple-800 rounded text-purple-300 font-mono text-[10px]">
             {candidatePlansCount} CANDIDATE PLAN(S) AVAILABLE — Review and approve
+          </div>
+        )}
+        {missionStatus === 'EXECUTING' && anomalyActive && (
+          <div className="mt-2 p-2 bg-emerald-900/30 border border-emerald-800 rounded text-emerald-300 font-mono text-[10px]">
+            BATTERY ANOMALY ACTIVE — Recovery plan executing
           </div>
         )}
       </div>

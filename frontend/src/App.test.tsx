@@ -79,6 +79,47 @@ describe('App', () => {
     });
   });
 
+  it('footer displays Phase 1 Demo', async () => {
+    const mockMission: Mission = {
+      mission_id: 'luna-mission-001',
+      label: 'Shackleton Rim Survey — Alpha',
+      status: 'IDLE' as const,
+      elapsed_s: 0,
+      resources: {
+        battery_pct: 100,
+        storage_pct: 0,
+        temperature_c: -40,
+        comm_window_remaining_s: 7200,
+        op_time_remaining_s: 28800,
+      },
+      original_route: { waypoints: [] },
+      active_route: { waypoints: [] },
+      candidate_plans: [],
+      anomaly_active: false,
+      audit_trail: [
+        {
+          event_id: 'audit-001',
+          event_type: 'mission.initialized',
+          description: 'Mission scenario loaded from seed data.',
+          timestamp: '2026-08-06T00:00:00.000Z',
+          metadata: { mission_id: 'luna-mission-001' },
+        },
+      ],
+    };
+    missionApi.getMissionState.mockResolvedValue(mockMission);
+    missionApi.getScenario.mockResolvedValue({
+      mission_id: 'luna-mission-001',
+      label: 'Shackleton Rim Survey — Alpha',
+      waypoints: [],
+    });
+
+    render(<App />, { wrapper: createWrapper() });
+
+    await waitFor(() => {
+      expect(screen.getByText(/LunaYield Mission Lab - Phase 1 Demo/i)).toBeInTheDocument();
+    });
+  });
+
   it('shows loading state initially', () => {
     const missionPromise = new Promise<Mission>((_resolve) => {
       // _resolve is used internally by the test
