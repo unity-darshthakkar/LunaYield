@@ -1,4 +1,4 @@
-/** Route panel displaying the active route waypoints as a timeline */
+/** Route panel displaying the active route waypoints as an ordered timeline */
 
 import type { MissionRoute, RouteWaypoint } from '../types/mission';
 import { clsx } from 'clsx';
@@ -12,32 +12,14 @@ interface RoutePanelProps {
 function WaypointItem({
   waypoint,
   index,
-  isCurrent,
-  isCompleted,
 }: {
   waypoint: RouteWaypoint;
   index: number;
-  isCurrent?: boolean;
-  isCompleted?: boolean;
 }) {
-  const statusColor = isCurrent
-    ? 'text-yellow-400'
-    : isCompleted
-    ? 'text-green-400'
-    : 'text-gray-500';
-
-  const dotColor = isCurrent
-    ? 'bg-yellow-400'
-    : isCompleted
-    ? 'bg-green-400'
-    : 'bg-gray-600';
-
   return (
     <div className="flex items-start gap-3">
       <div className="flex flex-col items-center">
-        <div
-          className={`w-3 h-3 rounded-full ${dotColor} border-2 border-gray-900 z-10`}
-        />
+        <div className="w-3 h-3 rounded-full bg-gray-600 border-2 border-gray-900 z-10" />
         {index > 0 && (
           <div className="w-0.5 h-full bg-gray-700 mt-1" />
         )}
@@ -47,7 +29,7 @@ function WaypointItem({
       </div>
       <div className="flex-1 min-w-0 pt-1">
         <div className="flex items-center gap-2">
-          <span className={`text-xs font-mono font-medium ${statusColor}`}>
+          <span className="text-xs font-mono font-medium text-white">
             {waypoint.label}
           </span>
           {waypoint.is_science_target && (
@@ -95,8 +77,6 @@ export function RoutePanel({
             key={waypoint.id}
             waypoint={waypoint}
             index={index}
-            isCurrent={index === 0}
-            isCompleted={false}
           />
         ))}
       </div>

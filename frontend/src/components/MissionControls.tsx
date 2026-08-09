@@ -147,7 +147,7 @@ export function MissionControls({
 
         <ControlButton
           onClick={onReset}
-          disabled={hasError} // Reset always available unless error
+          disabled={false} // Reset always available as escape hatch
           variant="secondary"
         >
           RESET MISSION

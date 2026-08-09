@@ -2,19 +2,15 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Request, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 from app.ws_manager import WSConnectionManager
 
 router = APIRouter(prefix="/api/ws", tags=["websocket"])
 
 
-def _get_ws_manager(request: Request) -> WSConnectionManager:
-    return request.app.state.ws_manager
-
-
 @router.websocket("/mission")
-async def mission_websocket(websocket: WebSocket, request: Request) -> None:
+async def mission_websocket(websocket: WebSocket) -> None:
     """WebSocket endpoint for real-time mission events.
 
     Broadcasts structured JSON events:
@@ -27,7 +23,8 @@ async def mission_websocket(websocket: WebSocket, request: Request) -> None:
     - plan.approved
     - mission.reset
     """
-    ws_manager = _get_ws_manager(request)
+    # Access ws_manager from the websocket's app state (via scope)
+    ws_manager: WSConnectionManager = websocket.app.state.ws_manager
     await ws_manager.connect(websocket)
 
     try:

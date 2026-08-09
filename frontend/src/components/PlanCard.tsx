@@ -35,6 +35,7 @@ export function PlanCard({
 
   return (
     <div
+      data-testid="plan-card"
       className={clsx(
         'p-4 rounded-lg border-2 transition-all',
         isRecommended
@@ -57,7 +58,7 @@ export function PlanCard({
           <p className="text-sm text-gray-400">{plan.description}</p>
         </div>
         <div className="text-right">
-          <div className={`inline-flex items-center px-2 py-1 rounded text-xs font-mono font-semibold ${statusColors[plan.status]}`}>
+          <div data-testid="plan-status" className={`inline-flex items-center px-2 py-1 rounded text-xs font-mono font-semibold ${statusColors[plan.status]}`}>
             {statusLabels[plan.status]}
           </div>
           <div className="text-xs text-gray-500 font-mono mt-1">

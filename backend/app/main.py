@@ -27,7 +27,9 @@ async def telemetry_loop(
         while True:
             sample = telemetry_service.generate_sample()
             if sample is not None:
-                await ws_manager.broadcast("telemetry.updated", sample.model_dump())
+                # Use Pydantic v2 JSON mode for proper datetime serialization
+                payload = sample.model_dump(mode="json")
+                await ws_manager.broadcast("telemetry.updated", payload)
             await asyncio.sleep(2.0)
     except asyncio.CancelledError:
         # Clean shutdown
