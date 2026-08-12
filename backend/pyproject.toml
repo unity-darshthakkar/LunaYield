@@ -8,6 +8,7 @@ dependencies = [
     "uvicorn[standard]>=0.29",
     "pydantic>=2.7",
     "websockets>=12.0",
+    "sqlmodel>=0.0.21",
 ]
 
 [project.optional-dependencies]

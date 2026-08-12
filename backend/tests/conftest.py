@@ -4,11 +4,13 @@ Pytest fixtures shared across Phase 1A and Phase 1B tests.
 Phase 1A: HTTP client bound to the FastAPI app.
 Phase 1B: MissionService fixture for direct service testing,
 clean_mission for reset between tests.
+Phase 2A: Database fixtures for isolated test databases.
 """
 
 import pytest
 from fastapi.testclient import TestClient
 
+from app.db import DatabaseConfig
 from app.main import app
 from app.seed import get_seed_mission
 from app.services.mission import MissionService
@@ -18,16 +20,32 @@ from app.services.telemetry import TelemetryService
 
 
 @pytest.fixture
-def client() -> TestClient:
+def db_config(tmp_path) -> DatabaseConfig:
+    """Provide isolated test database configuration.
+
+    Uses a temporary file-based SQLite database to ensure
+    test isolation and allow separate sessions to share the same database.
+    """
+    return DatabaseConfig.test_temporary(tmp_path)
+
+
+@pytest.fixture
+def client(db_config: DatabaseConfig) -> TestClient:
     """TestClient as context manager to trigger lifespan.
 
     Resets the shared MissionService before each test for isolation.
+    Uses isolated test database.
     """
+    # Set test database config before TestClient triggers lifespan
+    app.state.db_config = db_config
     with TestClient(app) as c:
         mission_service: MissionService = app.state.mission_service
         mission_service.reset()
         yield c
         mission_service.reset()
+    # Clean up test config
+    if hasattr(app.state, "db_config"):
+        delattr(app.state, "db_config")
 
 
 @pytest.fixture

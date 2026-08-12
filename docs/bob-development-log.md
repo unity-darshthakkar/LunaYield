@@ -198,3 +198,47 @@ To be added after the Phase 0 commit.
 - Golden path repeat-each=3: 3/3 passes
 - git diff --check: clean; Phase 1D working tree changes pending commit
 - No `explicit any`, no mojibake, no frontend safety thresholds, no Phase 2 features
+
+---
+
+## Phase 2A — Persistence Foundation
+
+**Date:** August 11, 2026
+**Branch:** `phase-2a-persistence-foundation`
+**Bob workflow:** None for Phase 2A implementation — delegated to FCC Claude/Nemotron.
+
+### Bob Contributions
+- None for Phase 2A implementation.
+
+### Delegated Implementation (FCC Claude/Nemotron)
+- SQLModel + SQLite persistence layer added as foundation for future durable mission history
+- Three persistence entities: `MissionRunRecord`, `MissionSnapshotRecord`, `AuditEventRecord`
+- Database configuration with deterministic path resolution from package location (`backend/data/lunayield.db`)
+- Repository layer with session injection: `MissionRunRepository`, `MissionSnapshotRepository`, `AuditEventRepository`
+- Engine/session factory helpers: `create_engine_from_config`, `init_db`, `get_session_factory`, `session_scope`
+- Database tables initialized during FastAPI lifespan; test isolation via temporary file-based SQLite databases
+- 20 new persistence tests covering: table initialization, CRUD, JSON round-trip, session isolation, deterministic lookups
+- All 105 existing Phase 1 backend tests continue to pass
+- No Phase 1 runtime behavior changed — `MissionService` remains pure in-memory, WebSocket/telemetry/reset unchanged
+- No Alembic, no async driver, no pydantic-settings, no telemetry persistence
+
+### Files Created
+- `backend/app/db/config.py` — `DatabaseConfig` dataclass with `development()`, `test_temporary()`, `test_memory()`
+- `backend/app/db/models.py` — SQLModel tables: `MissionRunRecord`, `MissionSnapshotRecord`, `AuditEventRecord`
+- `backend/app/db/engine.py` — Engine/session factory helpers
+- `backend/app/db/repository.py` — Repository layer with session injection
+- `backend/app/db/__init__.py` — Clean exports
+- `backend/tests/test_persistence.py` — 20 persistence foundation tests
+
+### Files Modified
+- `backend/pyproject.toml` — Added `sqlmodel>=0.0.21` dependency
+- `backend/app/main.py` — Database initialization in lifespan, stores engine/session_factory on `app.state`
+- `backend/tests/conftest.py` — Added `db_config` fixture for isolated test databases; `client` fixture uses test DB
+- `docs/bob-development-log.md` — This entry
+
+### Validation
+- Backend: ruff check/format + pytest (125 tests: 105 Phase 1 + 20 Phase 2A) — all pass (Python 3.12.4)
+- Database path resolution works from any working directory (uses `__file__` anchored to package)
+- Test isolation verified: temporary databases don't share data; records survive across sessions
+- Phase 1 runtime behavior unchanged: `MissionService` state machine, WebSocket events, telemetry, reset, planning, safety all identical
+- No Phase 2B+ functionality implemented (no automatic persistence, no restoration, no history endpoints, no telemetry persistence)
