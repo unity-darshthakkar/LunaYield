@@ -191,3 +191,84 @@ class PlanApprovalResult(BaseModel):
     updated_route: MissionRoute
     audit_event: AuditEvent
     mission_status: MissionStatus
+
+
+# ---------------------------------------------------------------------------
+# History API response schemas (Phase 2B)
+# ---------------------------------------------------------------------------
+
+
+class MissionRunHistoryItem(BaseModel):
+    """Minimal mission run representation for history API."""
+
+    run_id: str
+    mission_id: str
+    label: str
+    seed_mission_id: str
+    started_at: datetime
+    ended_at: datetime | None = None
+    final_status: str | None = None
+
+
+class MissionRunListResponse(BaseModel):
+    """Response for listing mission runs."""
+
+    mission_id: str
+    runs: list[MissionRunHistoryItem]
+    limit: int
+
+
+class MissionRunDetailResponse(BaseModel):
+    """Response for getting a single mission run."""
+
+    run_id: str
+    mission_id: str
+    label: str
+    seed_mission_id: str
+    started_at: datetime
+    ended_at: datetime | None = None
+    final_status: str | None = None
+
+
+class MissionSnapshotHistoryItem(BaseModel):
+    """Minimal mission snapshot representation for history API."""
+
+    snapshot_id: str
+    sequence: int
+    status: str
+    elapsed_s: int
+    created_at: datetime
+    battery_pct: float | None = None
+    temperature_c: float | None = None
+    storage_pct: float | None = None
+    anomaly_active: bool
+
+
+class MissionSnapshotListResponse(BaseModel):
+    """Response for listing mission snapshots."""
+
+    run_id: str
+    snapshots: list[MissionSnapshotHistoryItem]
+    limit: int
+    offset: int
+    total_snapshots_available: int
+
+
+class AuditEventHistoryItem(BaseModel):
+    """Minimal audit event representation for history API."""
+
+    audit_id: str
+    event_type: str
+    description: str
+    timestamp: datetime
+    sequence: int
+
+
+class AuditEventListResponse(BaseModel):
+    """Response for listing audit events."""
+
+    run_id: str
+    audit_events: list[AuditEventHistoryItem]
+    limit: int
+    offset: int
+    total_audit_events_available: int

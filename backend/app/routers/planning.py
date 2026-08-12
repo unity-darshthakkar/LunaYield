@@ -11,6 +11,7 @@ from app.services.exceptions import (
     PlanNotFoundError,
     PlanUnsafeError,
 )
+from app.services.persistence import MissionPersistenceService
 
 router = APIRouter(prefix="/api/plans", tags=["planning"])
 
@@ -21,6 +22,18 @@ def _get_mission_service(request: Request):
 
 def _get_ws_manager(request: Request):
     return request.app.state.ws_manager
+
+
+def _get_persistence_service(request: Request) -> MissionPersistenceService:
+    """Get MissionPersistenceService from app state."""
+    return request.app.state.persistence_service
+
+
+async def _persist_after_transition(request: Request, mission) -> None:
+    """Persist snapshot and new audit events after a successful state transition."""
+    persistence_service = _get_persistence_service(request)
+    persistence_service.persist_snapshot(mission)
+    persistence_service.persist_new_audit_events(mission)
 
 
 @router.post("/generate", response_model=list[CandidatePlan])
@@ -38,6 +51,8 @@ async def generate_plans(request: Request) -> list[CandidatePlan]:
         raise HTTPException(status_code=409, detail=str(e)) from e
     except MissionStateError as e:
         raise HTTPException(status_code=409, detail=str(e)) from e
+
+    await _persist_after_transition(request, mission)
 
     await ws_manager.broadcast(
         "plans.generated",
@@ -72,6 +87,8 @@ async def approve_plan(plan_id: str, request: Request) -> CandidatePlan:
         raise HTTPException(status_code=404, detail=str(e)) from e
     except PlanUnsafeError as e:
         raise HTTPException(status_code=422, detail=str(e)) from e
+
+    await _persist_after_transition(request, mission)
 
     approved_plan = next(p for p in mission.candidate_plans if p.plan_id == plan_id)
 
