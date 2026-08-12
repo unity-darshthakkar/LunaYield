@@ -1,8 +1,8 @@
-ï»¿# IBM Bob Development Log
+# IBM Bob Development Log
 
 This document records how IBM Bob was used as the primary development tool for LunaYield Mission Lab.
 
-## Phase 0 â€” Project Foundation
+## Phase 0 — Project Foundation
 
 **Date:** August 6, 2026
 **Branch:** `phase-0-project-foundation`
@@ -64,7 +64,7 @@ To be added after the Phase 0 commit.
 
 ---
 
-## Phase 1A â€” Backend Scaffold & Frontend Skeleton
+## Phase 1A — Backend Scaffold & Frontend Skeleton
 
 **Date:** August 2026
 **Branch:** `phase-1-demo-skeleton` (commit 771707d)
@@ -80,8 +80,8 @@ To be added after the Phase 0 commit.
 - Initial component structure and API client
 
 ### Files Created/Modified
-- `backend/app/` â€” main.py, schemas.py, seed.py, routers/, services/
-- `frontend/` â€” package.json, vite.config.ts, src/main.tsx, src/App.tsx, src/hooks/, src/components/, src/types/
+- `backend/app/` — main.py, schemas.py, seed.py, routers/, services/
+- `frontend/` — package.json, vite.config.ts, src/main.tsx, src/App.tsx, src/hooks/, src/components/, src/types/
 
 ### Validation
 - Backend structure complete, schemas defined
@@ -89,11 +89,11 @@ To be added after the Phase 0 commit.
 
 ---
 
-## Phase 1B â€” Deterministic Mission Engine & Safety Flow
+## Phase 1B — Deterministic Mission Engine & Safety Flow
 
 **Date:** August 2026
 **Branch:** `phase-1-demo-skeleton` (commit f978351)
-**Bob workflow:** No Bob involvement â€” implemented via FCC Claude/Nemotron.
+**Bob workflow:** No Bob involvement — implemented via FCC Claude/Nemotron.
 
 ### Bob Contributions
 - None for Phase 1B implementation
@@ -108,13 +108,13 @@ To be added after the Phase 0 commit.
 - 105 backend tests covering lifecycle, planning, safety, approval, audit, telemetry, WS schemas
 
 ### Files Created/Modified
-- `backend/app/services/mission.py` â€” authoritative state machine
-- `backend/app/services/planning.py` â€” deterministic 3-plan generation
-- `backend/app/services/safety.py` â€” safety verification
-- `backend/app/services/telemetry.py` â€” telemetry generation
-- `backend/app/ws_manager.py` â€” WebSocket manager
-- `backend/app/routers/mission.py`, `planning.py`, `ws.py` â€” API endpoints
-- `backend/tests/` â€” full test suite
+- `backend/app/services/mission.py` — authoritative state machine
+- `backend/app/services/planning.py` — deterministic 3-plan generation
+- `backend/app/services/safety.py` — safety verification
+- `backend/app/services/telemetry.py` — telemetry generation
+- `backend/app/ws_manager.py` — WebSocket manager
+- `backend/app/routers/mission.py`, `planning.py`, `ws.py` — API endpoints
+- `backend/tests/` — full test suite
 
 ### Validation
 - All 105 backend tests pass
@@ -122,11 +122,11 @@ To be added after the Phase 0 commit.
 
 ---
 
-## Phase 1C â€” Mission Control Frontend Integration
+## Phase 1C — Mission Control Frontend Integration
 
 **Date:** August 2026
 **Branch:** `phase-1-demo-skeleton` (commit 01bf6ab)
-**Bob workflow:** No Bob involvement â€” implemented via FCC Claude/Nemotron.
+**Bob workflow:** No Bob involvement — implemented via FCC Claude/Nemotron.
 
 ### Bob Contributions
 - None for Phase 1C implementation
@@ -138,7 +138,7 @@ To be added after the Phase 0 commit.
 - 67 frontend tests (Vitest + RTL)
 
 ### Files Created/Modified
-- `frontend/src/components/` â€” all UI components
+- `frontend/src/components/` — all UI components
 - `frontend/src/hooks/useMission.ts`, `useMissionSocket.ts`
 - `frontend/src/api/mission.ts`, `client.ts`
 - `frontend/src/types/mission.ts`
@@ -151,11 +151,11 @@ To be added after the Phase 0 commit.
 
 ---
 
-## Phase 1D â€” End-to-End Stabilization, Demo Validation, Coverage, Documentation
+## Phase 1D — End-to-End Stabilization, Demo Validation, Coverage, Documentation
 
 **Date:** August 9, 2026
 **Branch:** `phase-1-demo-skeleton`
-**Bob workflow:** No Bob involvement â€” stabilization implemented via FCC Claude/Nemotron.
+**Bob workflow:** No Bob involvement — stabilization implemented via FCC Claude/Nemotron.
 
 ### Bob Contributions
 - None for Phase 1D implementation
@@ -164,16 +164,16 @@ To be added after the Phase 0 commit.
 
 ### Work Completed (FCC Claude/Nemotron)
 - **Playwright E2E test suite** added:
-  - `frontend/playwright.config.ts` â€” Chromium-only config with frontend webServer
-  - `frontend/e2e/mission-flow.spec.ts` â€” 22-step golden path test
-  - `frontend/e2e/error-flow.spec.ts` â€” 4 realistic error/safety tests
+  - `frontend/playwright.config.ts` — Chromium-only config with frontend webServer
+  - `frontend/e2e/mission-flow.spec.ts` — 22-step golden path test
+  - `frontend/e2e/error-flow.spec.ts` — 4 realistic error/safety tests
   - `@playwright/test` devDependency + `test:e2e` script
 - **Bug fixes**:
   - `MissionControls.tsx`: Reset button now always enabled (removed `disabled={hasError}`)
   - `RoutePanel.tsx`: Removed fake "current waypoint" progress indicator (backend exposes no route progress)
 - **Documentation**:
-  - `docs/phase-1-demo.md` â€” complete demo walkthrough, architecture, commands, troubleshooting
-  - `README.md` â€” project overview with IMPLEMENTED vs PLANNED distinction
+  - `docs/phase-1-demo.md` — complete demo walkthrough, architecture, commands, troubleshooting
+  - `README.md` — project overview with IMPLEMENTED vs PLANNED distinction
   - Updated `docs/bob-development-log.md` with truthful attribution
 
 ### Files Created
@@ -184,15 +184,15 @@ To be added after the Phase 0 commit.
 - `README.md`
 
 ### Files Modified
-- `frontend/package.json` â€” added @playwright/test, test:e2e script
-- `frontend/src/components/MissionControls.tsx` â€” Reset button fix
-- `frontend/src/components/RoutePanel.tsx` â€” removed fake progress
-- `docs/bob-development-log.md` â€” appended Phase 1D entry
+- `frontend/package.json` — added @playwright/test, test:e2e script
+- `frontend/src/components/MissionControls.tsx` — Reset button fix
+- `frontend/src/components/RoutePanel.tsx` — removed fake progress
+- `docs/bob-development-log.md` — appended Phase 1D entry
 
 ### Validation
-- Backend: ruff check/format + pytest (105 tests) â€” all pass (Python 3.12.4)
-- Frontend: build + lint + vitest (67 tests) â€” all pass
-- E2E: Playwright Chromium suite (workers=1) â€” 5/5 tests pass
+- Backend: ruff check/format + pytest (105 tests) — all pass (Python 3.12.4)
+- Frontend: build + lint + vitest (67 tests) — all pass
+- E2E: Playwright Chromium suite (workers=1) — 5/5 tests pass
   - Golden path: 22-step mission flow passes
   - Error flow: 4 tests pass (invalid controls, rejected plan visibility, 422 error rendering, WS status)
 - Golden path repeat-each=3: 3/3 passes
@@ -201,11 +201,11 @@ To be added after the Phase 0 commit.
 
 ---
 
-## Phase 2A â€” Persistence Foundation
+## Phase 2A — Persistence Foundation
 
 **Date:** August 11, 2026
 **Branch:** `phase-2a-persistence-foundation`
-**Bob workflow:** None for Phase 2A implementation â€” delegated to FCC Claude/Nemotron.
+**Bob workflow:** None for Phase 2A implementation — delegated to FCC Claude/Nemotron.
 
 ### Bob Contributions
 - None for Phase 2A implementation.
@@ -219,26 +219,141 @@ To be added after the Phase 0 commit.
 - Database tables initialized during FastAPI lifespan; test isolation via temporary file-based SQLite databases
 - 20 new persistence tests covering: table initialization, CRUD, JSON round-trip, session isolation, deterministic lookups
 - All 105 existing Phase 1 backend tests continue to pass
-- No Phase 1 runtime behavior changed â€” `MissionService` remains pure in-memory, WebSocket/telemetry/reset unchanged
+- No Phase 1 runtime behavior changed — `MissionService` remains pure in-memory, WebSocket/telemetry/reset unchanged
 - No Alembic, no async driver, no pydantic-settings, no telemetry persistence
 
 ### Files Created
-- `backend/app/db/config.py` â€” `DatabaseConfig` dataclass with `development()`, `test_temporary()`, `test_memory()`
-- `backend/app/db/models.py` â€” SQLModel tables: `MissionRunRecord`, `MissionSnapshotRecord`, `AuditEventRecord`
-- `backend/app/db/engine.py` â€” Engine/session factory helpers
-- `backend/app/db/repository.py` â€” Repository layer with session injection
-- `backend/app/db/__init__.py` â€” Clean exports
-- `backend/tests/test_persistence.py` â€” 20 persistence foundation tests
+- `backend/app/db/config.py` — `DatabaseConfig` dataclass with `development()`, `test_temporary()`, `test_memory()`
+- `backend/app/db/models.py` — SQLModel tables: `MissionRunRecord`, `MissionSnapshotRecord`, `AuditEventRecord`
+- `backend/app/db/engine.py` — Engine/session factory helpers
+- `backend/app/db/repository.py` — Repository layer with session injection
+- `backend/app/db/__init__.py` — Clean exports
+- `backend/tests/test_persistence.py` — 20 persistence foundation tests
 
 ### Files Modified
-- `backend/pyproject.toml` â€” Added `sqlmodel>=0.0.21` dependency
-- `backend/app/main.py` â€” Database initialization in lifespan, stores engine/session_factory on `app.state`
-- `backend/tests/conftest.py` â€” Added `db_config` fixture for isolated test databases; `client` fixture uses test DB
-- `docs/bob-development-log.md` â€” This entry
+- `backend/pyproject.toml` — Added `sqlmodel>=0.0.21` dependency
+- `backend/app/main.py` — Database initialization in lifespan, stores engine/session_factory on `app.state`
+- `backend/tests/conftest.py` — Added `db_config` fixture for isolated test databases; `client` fixture uses test DB
+- `docs/bob-development-log.md` — This entry
 
 ### Validation
-- Backend: ruff check/format + pytest (125 tests: 105 Phase 1 + 20 Phase 2A) â€” all pass (Python 3.12.4)
+- Backend: ruff check/format + pytest (125 tests: 105 Phase 1 + 20 Phase 2A) — all pass (Python 3.12.4)
 - Database path resolution works from any working directory (uses `__file__` anchored to package)
 - Test isolation verified: temporary databases don't share data; records survive across sessions
 - Phase 1 runtime behavior unchanged: `MissionService` state machine, WebSocket events, telemetry, reset, planning, safety all identical
 - No Phase 2B+ functionality implemented (no automatic persistence, no restoration, no history endpoints, no telemetry persistence)
+
+
+## Phase 2B — Durable Mission Runs and History Integration
+
+**Implementation tool:** FCC Claude with NVIDIA Nemotron models
+**Status:** Complete and independently validated
+
+Phase 2B integrates the Phase 2A SQLModel persistence foundation with the
+existing mission lifecycle while keeping `MissionService` authoritative for
+live in-memory mission state.
+
+### Durable Mission Runs
+
+Application startup creates a new persisted `MissionRunRecord` for the current
+seed mission. The initial mission state is persisted as snapshot sequence 1,
+along with the mission's initial audit history.
+
+Persistence does not restore or replace runtime mission state. The database is
+used only as durable mission history.
+
+### Transition Persistence
+
+Successful mission lifecycle transitions persist the resulting mission state
+and newly-created domain audit events.
+
+Persisted transitions include:
+
+- mission start
+- pause
+- resume
+- anomaly injection
+- candidate-plan generation / planning transition
+- plan approval / execution transition
+
+Failed state transitions do not create snapshots or persisted audit events.
+Read-only requests and telemetry ticks do not create persistence records.
+
+### Reset Semantics
+
+Phase 2B defines reset as a durable mission-run boundary.
+
+When reset occurs:
+
+1. The current run is marked ended.
+2. Its `ended_at` value is recorded.
+3. Its `final_status` records the mission status immediately before reset.
+4. The existing `MissionService.reset()` behavior resets the live mission.
+5. A new `MissionRunRecord` is created.
+6. The new run receives an initial snapshot beginning at sequence 1.
+7. The new mission's audit history is persisted without duplicating events from
+   the previous run.
+
+The previous run remains immutable history after reset.
+
+### Persistence Orchestration
+
+`MissionPersistenceService` coordinates persistence without owning mission
+state.
+
+It manages:
+
+- current persisted run identity
+- run creation and completion
+- mission snapshots
+- newly-added domain audit events
+- deterministic snapshot and audit sequencing
+
+Snapshot and audit sequence numbers are derived from persisted database state,
+so ordering remains deterministic across separate SQLModel sessions.
+
+### Read-Only History API
+
+Phase 2B adds typed read-only backend history endpoints:
+
+- `GET /api/missions/{mission_id}/runs`
+- `GET /api/runs/{run_id}`
+- `GET /api/runs/{run_id}/snapshots`
+- `GET /api/runs/{run_id}/audit`
+
+Runs are returned newest first. Snapshots and audit events are returned in
+ascending sequence order. Missing run lookups return HTTP 404, while missions
+with no persisted runs return an empty run list.
+
+### Validation
+
+Independent validation was performed using the project Python 3.12 environment.
+
+- Python: 3.12.4
+- Ruff check: passed
+- Ruff format check: passed
+- Phase 2B tests: 31 passed
+- Full backend suite: 156 passed
+- `git diff --check`: passed
+
+The test suite uses isolated temporary file-based SQLite databases and does not
+write to the development database.
+
+### Explicit Phase 2B Exclusions
+
+Phase 2B does **not** implement:
+
+- startup restoration of previous mission runs
+- resuming unfinished persisted runs
+- frontend mission-history UI
+- telemetry persistence
+- database migrations / Alembic
+- Phase 3 AI functionality
+- Phase 4 optimization or visualization
+
+Startup restoration remains deferred to Phase 2C.
+
+**Attribution:** Phase 2B implementation was delegated to FCC Claude using
+NVIDIA Nemotron models. IBM Bob remains the primary development tool for the
+overall LunaYield hackathon project; this delegated implementation is recorded
+truthfully for development provenance.

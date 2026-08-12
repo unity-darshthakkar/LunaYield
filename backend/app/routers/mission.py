@@ -6,6 +6,7 @@ from fastapi import APIRouter, HTTPException, Request
 
 from app.schemas import Mission
 from app.services.exceptions import MissionStateError
+from app.services.persistence import MissionPersistenceService
 
 # Mission router - lifecycle endpoints under /api/mission
 mission_router = APIRouter(prefix="/api/mission", tags=["mission"])
@@ -22,6 +23,18 @@ def _get_mission_service(request: Request):
 def _get_ws_manager(request: Request):
     """Get WebSocket manager from app state."""
     return request.app.state.ws_manager
+
+
+def _get_persistence_service(request: Request) -> MissionPersistenceService:
+    """Get MissionPersistenceService from app state."""
+    return request.app.state.persistence_service
+
+
+async def _persist_after_transition(request: Request, mission: Mission) -> None:
+    """Persist snapshot and new audit events after a successful state transition."""
+    persistence_service = _get_persistence_service(request)
+    persistence_service.persist_snapshot(mission)
+    persistence_service.persist_new_audit_events(mission)
 
 
 @mission_router.get("/state", response_model=Mission)
@@ -63,6 +76,8 @@ async def start_mission(request: Request) -> Mission:
     except MissionStateError as e:
         raise HTTPException(status_code=409, detail=str(e)) from e
 
+    await _persist_after_transition(request, mission)
+
     await ws_manager.broadcast(
         "mission.started",
         {"mission_id": mission.mission_id, "status": mission.status.value},
@@ -80,6 +95,8 @@ async def pause_mission(request: Request) -> Mission:
         mission = mission_service.pause()
     except MissionStateError as e:
         raise HTTPException(status_code=409, detail=str(e)) from e
+
+    await _persist_after_transition(request, mission)
 
     await ws_manager.broadcast(
         "mission.paused",
@@ -99,6 +116,8 @@ async def resume_mission(request: Request) -> Mission:
     except MissionStateError as e:
         raise HTTPException(status_code=409, detail=str(e)) from e
 
+    await _persist_after_transition(request, mission)
+
     await ws_manager.broadcast(
         "mission.resumed",
         {"mission_id": mission.mission_id, "status": mission.status.value},
@@ -108,13 +127,26 @@ async def resume_mission(request: Request) -> Mission:
 
 @mission_router.post("/reset", response_model=Mission)
 async def reset_mission(request: Request) -> Mission:
-    """Reset mission to deterministic seed state."""
+    """Reset mission to deterministic seed state.
+
+    Ends current run and creates new run.
+    """
     mission_service = _get_mission_service(request)
     ws_manager = _get_ws_manager(request)
     telemetry_service = request.app.state.telemetry_service
+    persistence_service = _get_persistence_service(request)
 
+    # Capture pre-reset status for ending the current mission run
+    pre_reset_mission = mission_service.get_mission()
+    pre_reset_status = pre_reset_mission.status.value
+
+    # Perform the reset
     mission = mission_service.reset()
     telemetry_service.reset_tick_count()
+
+    # Persist: end old run, create new run, snapshot, audit events
+    persistence_service.mark_current_run_ended(pre_reset_status)
+    persistence_service.reset_and_create_new_run(mission)
 
     await ws_manager.broadcast(
         "mission.reset",
@@ -133,6 +165,8 @@ async def inject_anomaly(request: Request) -> Mission:
         mission = mission_service.inject_anomaly()
     except MissionStateError as e:
         raise HTTPException(status_code=409, detail=str(e)) from e
+
+    await _persist_after_transition(request, mission)
 
     await ws_manager.broadcast(
         "anomaly.injected",

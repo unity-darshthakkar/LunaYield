@@ -13,8 +13,9 @@ from app.db import (
     get_session_factory,
     init_db,
 )
-from app.routers import health, mission, planning, ws
+from app.routers import health, history, mission, planning, ws
 from app.services.mission import MissionService
+from app.services.persistence import MissionPersistenceService
 from app.services.planning import PlanningService
 from app.services.safety import SafetyVerifier
 from app.services.telemetry import TelemetryService
@@ -66,6 +67,7 @@ async def lifespan(app: FastAPI):
     safety_verifier = SafetyVerifier()
     telemetry_service = TelemetryService(mission_service)
     ws_manager = WSConnectionManager()
+    persistence_service = MissionPersistenceService(session_factory)
 
     # Set up dependencies
     mission_service.set_dependencies(safety_verifier, planning_service)
@@ -78,6 +80,12 @@ async def lifespan(app: FastAPI):
     app.state.ws_manager = ws_manager
     app.state.db_engine = engine
     app.state.db_session_factory = session_factory
+    app.state.persistence_service = persistence_service
+
+    # Initialize the first mission run (creates run + initial snapshot + audit)
+    # This runs once on startup, not on every request
+    initial_mission = mission_service.get_mission()
+    persistence_service.create_initial_run(initial_mission)
 
     # Start telemetry background task
     telemetry_task = asyncio.create_task(telemetry_loop(telemetry_service, ws_manager))
@@ -109,6 +117,7 @@ def create_app() -> FastAPI:
     application.include_router(mission.scenario_router)
     application.include_router(planning.router)
     application.include_router(ws.router)
+    application.include_router(history.router)
     return application
 
 
