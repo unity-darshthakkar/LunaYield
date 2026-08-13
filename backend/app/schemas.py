@@ -194,6 +194,64 @@ class PlanApprovalResult(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Forecasting schemas (Phase 3A)
+# ---------------------------------------------------------------------------
+
+
+class ResourceForecast(BaseModel):
+    """Forecast of resource levels at a future point in time."""
+
+    battery_pct: float = Field(
+        ..., description="Forecasted battery level 0–100 %", ge=0.0, le=100.0
+    )
+    storage_pct: float = Field(
+        ..., description="Forecasted storage used 0–100 %", ge=0.0, le=100.0
+    )
+    temperature_c: float = Field(
+        ..., description="Forecasted internal temperature in °C"
+    )
+    comm_window_remaining_s: int = Field(
+        ..., description="Forecasted seconds remaining in current comms window", ge=0
+    )
+    op_time_remaining_s: int = Field(
+        ..., description="Forecasted seconds of operational time remaining", ge=0
+    )
+
+
+class ForecastPoint(BaseModel):
+    """A single point in the forecast timeline."""
+
+    forecast_seconds_ahead: int = Field(
+        ..., description="Seconds ahead from current time for this forecast", ge=0
+    )
+    elapsed_s: int = Field(
+        ..., description="Mission elapsed time at this forecast point", ge=0
+    )
+    resources: ResourceForecast
+
+
+class MissionForecastResponse(BaseModel):
+    """Response for mission resource forecast."""
+
+    mission_id: str = Field(..., description="Mission identifier")
+    current_elapsed_s: int = Field(
+        ..., description="Current mission elapsed time in seconds", ge=0
+    )
+    current_resources: RoverResources = Field(
+        ..., description="Current mission resource levels"
+    )
+    forecast_horizon_s: int = Field(
+        ..., description="Forecast horizon in seconds", ge=0
+    )
+    forecast_tick_interval_s: int = Field(
+        ..., description="Seconds per forecast tick", ge=1
+    )
+    forecast_points: list[ForecastPoint] = Field(
+        ..., description="Array of forecast points from t+interval to t+horizon"
+    )
+
+
+# ---------------------------------------------------------------------------
 # History API response schemas (Phase 2B)
 # ---------------------------------------------------------------------------
 

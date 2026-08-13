@@ -19,13 +19,14 @@ from app.db.repository import (
     MissionRunRepository,
     MissionSnapshotRepository,
 )
-from app.routers import health, history, mission, planning, ws
+from app.routers import forecasting, health, history, mission, planning, ws
 from app.schemas import (
     AuditEvent,
     Mission,
     MissionStatus,
 )
 from app.seed import get_seed_mission
+from app.services.forecasting import ForecastingService
 from app.services.mission import MissionService
 from app.services.persistence import MissionPersistenceService
 from app.services.planning import PlanningService
@@ -216,6 +217,7 @@ async def lifespan(app: FastAPI):
     planning_service = PlanningService()
     safety_verifier = SafetyVerifier()
     telemetry_service = TelemetryService(mission_service)
+    forecasting_service = ForecastingService(mission_service)
     ws_manager = WSConnectionManager()
     persistence_service = MissionPersistenceService(session_factory)
 
@@ -227,6 +229,7 @@ async def lifespan(app: FastAPI):
     app.state.planning_service = planning_service
     app.state.safety_verifier = safety_verifier
     app.state.telemetry_service = telemetry_service
+    app.state.forecasting_service = forecasting_service
     app.state.ws_manager = ws_manager
     app.state.db_engine = engine
     app.state.db_session_factory = session_factory
@@ -346,6 +349,7 @@ def create_app() -> FastAPI:
     application.include_router(planning.router)
     application.include_router(ws.router)
     application.include_router(history.router)
+    application.include_router(forecasting.router)
     return application
 
 

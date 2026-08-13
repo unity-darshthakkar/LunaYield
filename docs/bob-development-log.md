@@ -479,3 +479,36 @@ truthfully for development provenance.
 - `ruff format --check app tests`: 40 files already formatted
 - `git diff --check`: passed
 - Existing Starlette/httpx and HTTP 422 constant deprecation warnings remain non-blocking.
+
+---
+
+## Phase 3A - Forecasting Foundation
+
+**Development:** Implementation and test work for this phase was delegated through FCC Claude using NVIDIA Nemotron 3 Super 120B-A12B, followed by manual review, semantic correction, cleanup, and validation. Manual validation was performed using the project's Python 3.12.4 environment. IBM Bob remains the primary project development and planning tool.
+
+### Implemented
+
+- Added deterministic backend resource forecasting.
+- Added forecasts for battery, storage, temperature, communications window, and remaining operational time.
+- Added Pydantic forecasting response schemas.
+- Added a read-only `/api/forecast` endpoint.
+- Forecasting reads authoritative live state from MissionService and does not mutate mission state.
+- Forecasts start from current mission resources and apply only future deterministic resource changes.
+- Added configurable forecast horizon and interval validation.
+- Added focused coverage for response schemas, boundaries, invalid inputs, deterministic output, non-mutation, and current-state baseline behavior.
+- No LLM calls.
+- No anomaly detection.
+- No strategy generation.
+- No telemetry persistence.
+- No persistence, restoration, or history semantic changes.
+- No frontend changes.
+
+### Validation
+
+- Python 3.12.4
+- Phase 3A tests: **7 passed**
+- Full backend suite: **202 passed**
+- `ruff check app tests`: passed
+- `ruff format --check app tests`: 43 files already formatted
+- `git diff --check`: passed
+- Existing Starlette/httpx and HTTP 422 constant deprecation warnings remain non-blocking.
