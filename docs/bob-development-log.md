@@ -387,3 +387,33 @@ truthfully for development provenance.
 - `ruff format --check app tests`: 37 files already formatted
 - `git diff --check`: passed
 - Existing Starlette/httpx deprecation warning remains non-blocking.
+
+---
+
+## Phase 2D - Restoration Hardening
+
+**Development:** Implementation and test work for this phase was delegated through FCC Claude using NVIDIA Nemotron 3 Super 120B-A12B. Manual validation was performed using the project's Python 3.12.4 environment. IBM Bob remains the primary project development and planning tool; this entry preserves accurate tool attribution.
+
+### Implemented
+
+- Added stricter validation for restored mission snapshots before applying them as authoritative state.
+- Added checks for invalid elapsed time, resource bounds, waypoint coordinates, mission status, and inconsistent restored state.
+- Hardened audit reconstruction so malformed persisted audit metadata fails safely.
+- Preserved deterministic selection of unfinished runs, including tie-breaking by database ID when `started_at` values match.
+- Ensured failed restoration does not partially mutate `MissionService`.
+- Invalid persisted state marks the unusable run as `RESTORATION_FAILED` and creates a fresh run.
+- Preserved normal Phase 2C restoration behavior for valid runs.
+- Empty persisted audit history remains allowed when the snapshot is valid.
+- No frontend changes.
+- No telemetry persistence.
+- No broad architecture refactor.
+
+### Validation
+
+- Python 3.12.4
+- Phase 2D tests: **9 passed**
+- Full backend suite: **182 passed**
+- `ruff check app tests`: passed
+- `ruff format --check app tests`: 38 files already formatted
+- `git diff --check`: passed
+- Existing Starlette/httpx deprecation warning remains non-blocking.
