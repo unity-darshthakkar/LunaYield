@@ -33,6 +33,68 @@ class MissionService:
         self._safety_verifier: SafetyVerifier | None = None
         self._planning_service: PlanningService | None = None
 
+    @classmethod
+    def restore_from_snapshot(
+        cls, snapshot_data: dict, audit_events: list, seed_mission: Mission
+    ) -> Mission:
+        """Restore a Mission domain model from persisted snapshot and audit events.
+
+        This is a pure reconstruction function — no side effects, no dependencies.
+        Used at startup to rebuild Mission state from durable storage.
+
+        Args:
+            snapshot_data: Dictionary with snapshot fields (status, elapsed_s,
+                resources_json, active_route_json, anomaly_active)
+            audit_events: List of AuditEventRecords (already parsed to domain
+                AuditEvent)
+            seed_mission: The deterministic seed mission providing structural baseline
+                (mission_id, label, original_route, etc.)
+
+        Returns:
+            Reconstructed Mission object ready for MissionService.
+        """
+        import json
+
+        from app.schemas import MissionRoute, RoverResources
+
+        # Parse persisted JSON fields
+        resources_dict = json.loads(snapshot_data["resources_json"])
+        active_route_dict = json.loads(snapshot_data["active_route_json"])
+
+        resources = RoverResources(**resources_dict)
+        active_route = MissionRoute(**active_route_dict)
+
+        # Determine status from snapshot
+        status = snapshot_data["status"]
+
+        # State normalization: ensure restored state is internally consistent
+        # If snapshot has AWAITING_APPROVAL but no candidate plans were persisted,
+        # normalize to ANOMALY (since candidate plans are not persisted)
+        normalized_status = status
+        if status == "AWAITING_APPROVAL":
+            # Cannot safely restore AWAITING_APPROVAL without candidate_plans
+            # Normalize to ANOMALY — operator must regenerate plans
+            normalized_status = "ANOMALY"
+
+        # EXECUTING is safe to restore because active_route is persisted
+        # RUNNING, PAUSED, IDLE, ANOMALY, COMPLETED, RESET are all safe
+
+        # Construct restored mission
+        restored = Mission(
+            mission_id=seed_mission.mission_id,
+            label=seed_mission.label,
+            status=normalized_status,
+            elapsed_s=snapshot_data["elapsed_s"],
+            resources=resources,
+            original_route=seed_mission.original_route,
+            active_route=active_route,
+            candidate_plans=[],  # Not persisted; cleared on restore
+            anomaly_active=snapshot_data["anomaly_active"],
+            audit_trail=audit_events,
+        )
+
+        return restored
+
     def set_dependencies(
         self,
         safety_verifier: SafetyVerifier,
@@ -46,6 +108,22 @@ class MissionService:
         """Return the current mission, initializing from seed if needed."""
         if self._mission is None:
             self._mission = get_seed_mission()
+        return self._mission
+
+    def restore(self, mission: Mission) -> Mission:
+        """Restore mission state from a previously persisted Mission.
+
+        Used at startup to load a Mission reconstructed from durable storage.
+        This is the only way to set mission state externally; all other
+        mutations go through explicit transition methods.
+
+        Args:
+            mission: A fully reconstructed Mission domain object.
+
+        Returns:
+            The restored mission.
+        """
+        self._mission = mission
         return self._mission
 
     def _create_audit_event(
