@@ -448,3 +448,34 @@ truthfully for development provenance.
 - `ruff format --check app tests`: 39 files already formatted
 - `git diff --check`: passed
 - Existing Starlette/httpx and HTTP 422 constant deprecation warnings remain non-blocking.
+
+---
+
+## Phase 2F - Persistence Integration Regression Hardening
+
+**Development:** Integration test work for this phase was delegated through FCC Claude using NVIDIA Nemotron 3 Super 120B-A12B, followed by manual cleanup and validation. Manual validation was performed using the project's Python 3.12.4 environment. IBM Bob remains the primary project development and planning tool.
+
+### Implemented
+
+- Added focused persistence integration regression coverage.
+- Verified persisted mission runs survive restart and remain visible through history APIs.
+- Verified startup restoration preserves durable run history.
+- Verified failed restoration produces durable RESTORATION_FAILED history.
+- Verified a fresh run created after failed restoration remains queryable.
+- Verified history ordering remains deterministic after restoration failure and recovery.
+- Added integration coverage across persistence, startup restoration, and history APIs.
+- No production code changes were required.
+- No frontend changes.
+- No telemetry persistence.
+- No reset semantic changes.
+- No architecture changes.
+
+### Validation
+
+- Python 3.12.4
+- Phase 2F tests: **3 passed**
+- Full backend suite: **195 passed**
+- `ruff check app tests`: passed
+- `ruff format --check app tests`: 40 files already formatted
+- `git diff --check`: passed
+- Existing Starlette/httpx and HTTP 422 constant deprecation warnings remain non-blocking.
