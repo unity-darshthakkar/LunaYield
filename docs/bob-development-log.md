@@ -417,3 +417,34 @@ truthfully for development provenance.
 - `ruff format --check app tests`: 38 files already formatted
 - `git diff --check`: passed
 - Existing Starlette/httpx deprecation warning remains non-blocking.
+
+---
+
+## Phase 2E - History API Hardening
+
+**Development:** Implementation and test work for this phase was delegated through FCC Claude using NVIDIA Nemotron 3 Super 120B-A12B, followed by manual review and correction. Manual validation was performed using the project's Python 3.12.4 environment. IBM Bob remains the primary project development and planning tool.
+
+### Implemented
+
+- Added validated offset pagination to mission run history.
+- Extended MissionRunRepository.list_for_mission() with an optional offset parameter while preserving existing callers through offset=0.
+- Applied pagination at the SQL query level using deterministic ordering before offset and limit.
+- Preserved existing mission run ordering by started_at descending and database ID descending.
+- Added validation coverage for invalid limit and offset inputs.
+- Added clean missing-resource history API coverage.
+- Added response schema, empty collection, and pagination ordering tests.
+- Preserved existing snapshot and audit history behavior.
+- No persistence semantic changes.
+- No frontend changes.
+- No telemetry persistence.
+- No broad architecture refactor.
+
+### Validation
+
+- Python 3.12.4
+- Phase 2E tests: **10 passed**
+- Full backend suite: **192 passed**
+- `ruff check app tests`: passed
+- `ruff format --check app tests`: 39 files already formatted
+- `git diff --check`: passed
+- Existing Starlette/httpx and HTTP 422 constant deprecation warnings remain non-blocking.

@@ -73,7 +73,7 @@ class MissionRunRepository:
         return self._session.exec(stmt).first()
 
     def list_for_mission(
-        self, mission_id: str, limit: int = 50
+        self, mission_id: str, limit: int = 50, offset: int = 0
     ) -> list[MissionRunRecord]:
         """List mission runs for a mission, newest first.
 
@@ -84,6 +84,7 @@ class MissionRunRepository:
             select(MissionRunRecord)
             .where(MissionRunRecord.mission_id == mission_id)
             .order_by(MissionRunRecord.started_at.desc(), MissionRunRecord.id.desc())
+            .offset(offset)
             .limit(limit)
         )
         return list(self._session.exec(stmt).all())
