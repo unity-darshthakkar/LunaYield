@@ -20,7 +20,11 @@ from app.db.repository import (
     MissionSnapshotRepository,
 )
 from app.routers import health, history, mission, planning, ws
-from app.schemas import AuditEvent
+from app.schemas import (
+    AuditEvent,
+    Mission,
+    MissionStatus,
+)
 from app.seed import get_seed_mission
 from app.services.mission import MissionService
 from app.services.persistence import MissionPersistenceService
@@ -68,19 +72,134 @@ def _reconstruct_audit_events(audit_records: list) -> list[AuditEvent]:
 
     Returns:
         List of domain AuditEvent objects in sequence order.
+
+    Raises:
+        ValueError: If any audit event data is invalid or malformed.
     """
     events = []
-    for record in audit_records:
-        metadata = record.to_metadata_dict()
-        event = AuditEvent(
-            event_id=record.event_id,
-            event_type=record.event_type,
-            description=record.description,
-            timestamp=record.timestamp,
-            metadata=metadata,
-        )
-        events.append(event)
+    for i, record in enumerate(audit_records):
+        try:
+            metadata = record.to_metadata_dict()
+            event = AuditEvent(
+                event_id=record.event_id,
+                event_type=record.event_type,
+                description=record.description,
+                timestamp=record.timestamp,
+                metadata=metadata,
+            )
+            events.append(event)
+        except Exception as e:
+            # If we can't reconstruct an audit event, the audit history is compromised
+            raise ValueError(f"Failed to reconstruct audit event at index {i}: {e}")
     return events
+
+
+def _validate_restored_mission(mission: Mission) -> None:
+    """Validate a restored mission for internal consistency and safety.
+
+    Performs additional validation beyond Pydantic model validation to ensure
+    the restored mission is safe to use as authoritative state.
+
+    Args:
+        mission: The restored mission to validate.
+
+    Raises:
+        ValueError: If the mission fails validation checks.
+    """
+    # Validate that elapsed_s is non-negative
+    if mission.elapsed_s < 0:
+        raise ValueError(f"elapsed_s cannot be negative: {mission.elapsed_s}")
+
+    # Validate that resources are within bounds (Pydantic should catch this,
+    # but double-check)
+    if not (0.0 <= mission.resources.battery_pct <= 100.0):
+        raise ValueError(f"battery_pct out of range: {mission.resources.battery_pct}")
+    if not (0.0 <= mission.resources.storage_pct <= 100.0):
+        raise ValueError(f"storage_pct out of range: {mission.resources.storage_pct}")
+    if mission.resources.temperature_c < -273.15:  # Absolute zero
+        raise ValueError(
+            f"temperature_c below absolute zero: {mission.resources.temperature_c}"
+        )
+    if mission.resources.comm_window_remaining_s < 0:
+        raise ValueError(
+            f"comm_window_remaining_s cannot be negative: "
+            f"{mission.resources.comm_window_remaining_s}"
+        )
+    if mission.resources.op_time_remaining_s < 0:
+        raise ValueError(
+            f"op_time_remaining_s cannot be negative: "
+            f"{mission.resources.op_time_remaining_s}"
+        )
+
+    # Validate waypoints in both routes
+    for i, waypoint in enumerate(mission.original_route.waypoints):
+        if not (0.0 <= waypoint.x <= 1.0):
+            raise ValueError(
+                f"original_route waypoint {i} x out of range [0,1]: {waypoint.x}"
+            )
+        if not (0.0 <= waypoint.y <= 1.0):
+            raise ValueError(
+                f"original_route waypoint {i} y out of range [0,1]: {waypoint.y}"
+            )
+
+    for i, waypoint in enumerate(mission.active_route.waypoints):
+        if not (0.0 <= waypoint.x <= 1.0):
+            raise ValueError(
+                f"active_route waypoint {i} x out of range [0,1]: {waypoint.x}"
+            )
+        if not (0.0 <= waypoint.y <= 1.0):
+            raise ValueError(
+                f"active_route waypoint {i} y out of range [0,1]: {waypoint.y}"
+            )
+
+    # Validate that status is a valid MissionStatus
+    try:
+        MissionStatus(mission.status)
+    except ValueError:
+        raise ValueError(f"Invalid mission status: {mission.status}")
+
+    # Additional state consistency checks
+    # If status is EXECUTING, anomaly_active should be False
+    # (can't be executing during anomaly)
+    if mission.status == MissionStatus.EXECUTING.value and mission.anomaly_active:
+        raise ValueError("Cannot be in EXECUTING state with anomaly_active=True")
+
+    # If status is AWAITING_APPROVAL, candidate_plans should normally be empty
+    # (they're not persisted)
+    # Note: We allow non-empty here as it might be valid in some edge cases,
+    # but we warn in logs if needed
+
+
+def _safe_restore_mission(
+    snapshot_data: dict, audit_events: list, seed_mission: Mission
+) -> Mission:
+    """Safely restore a mission with comprehensive validation.
+
+    Attempts to reconstruct and validate a mission from persisted data.
+    If any step fails, raises an exception to trigger fallback to fresh run.
+
+    Args:
+        snapshot_data: Dictionary with snapshot fields
+        audit_events: List of AuditEvent objects
+        seed_mission: The deterministic seed mission
+
+    Returns:
+        Validated Mission object ready for use
+
+    Raises:
+        (json.JSONDecodeError, ValueError, KeyError, TypeError):
+            If restoration fails at any step
+    """
+    # Reconstruct mission (may raise json.JSONDecodeError,
+    # ValueError, KeyError, TypeError)
+    restored_mission = MissionService.restore_from_snapshot(
+        snapshot_data, audit_events, seed_mission
+    )
+
+    # Validate the reconstructed mission (may raise ValueError)
+    _validate_restored_mission(restored_mission)
+
+    return restored_mission
 
 
 @asynccontextmanager
@@ -137,12 +256,17 @@ async def lifespan(app: FastAPI):
             audit_records = audit_repo.list_for_run(run_id)
 
         # 3d. Reconstruct audit events
-        audit_events = _reconstruct_audit_events(audit_records)
-
-        # 3e. Reconstruct Mission from snapshot + audit + seed
         restoration_failed = False
+        audit_events = None
+        try:
+            audit_events = _reconstruct_audit_events(audit_records)
+        except (json.JSONDecodeError, ValueError, KeyError, TypeError):
+            # Audit event reconstruction failed (malformed JSON, etc.)
+            restoration_failed = True
+
+        # 3e. Reconstruct Mission from snapshot + audit + seed with validation
         restored_mission = None
-        if latest_snapshot is not None:
+        if not restoration_failed and latest_snapshot is not None:
             snapshot_data = {
                 "status": latest_snapshot.status,
                 "elapsed_s": latest_snapshot.elapsed_s,
@@ -151,15 +275,16 @@ async def lifespan(app: FastAPI):
                 "anomaly_active": latest_snapshot.anomaly_active,
             }
             try:
-                restored_mission = MissionService.restore_from_snapshot(
+                restored_mission = _safe_restore_mission(
                     snapshot_data, audit_events, seed_mission
                 )
             except (json.JSONDecodeError, ValueError, KeyError, TypeError):
-                # Snapshot reconstruction failed (malformed JSON,
+                # Snapshot reconstruction or validation failed (malformed JSON,
                 # invalid Pydantic values, etc.)
                 restoration_failed = True
         else:
-            # 3f. No snapshot for unfinished run — corrupt/invalid
+            # Either audit reconstruction failed or no snapshot
+            # for unfinished run — corrupt/invalid
             restoration_failed = True
 
         if restoration_failed:
@@ -173,6 +298,7 @@ async def lifespan(app: FastAPI):
 
         if unfinished_run is not None:
             # 3g. Load restored mission into MissionService via public API
+            # At this point, restored_mission is guaranteed to be valid
             mission_service.restore(restored_mission)
 
             # 3h. Attach persistence service to existing run
