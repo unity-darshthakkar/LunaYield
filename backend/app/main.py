@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -13,7 +14,14 @@ from app.db import (
     get_session_factory,
     init_db,
 )
+from app.db.repository import (
+    AuditEventRepository,
+    MissionRunRepository,
+    MissionSnapshotRepository,
+)
 from app.routers import health, history, mission, planning, ws
+from app.schemas import AuditEvent
+from app.seed import get_seed_mission
 from app.services.mission import MissionService
 from app.services.persistence import MissionPersistenceService
 from app.services.planning import PlanningService
@@ -52,6 +60,29 @@ def _create_db_config() -> DatabaseConfig:
     return DatabaseConfig.development()
 
 
+def _reconstruct_audit_events(audit_records: list) -> list[AuditEvent]:
+    """Reconstruct domain AuditEvent objects from persisted records.
+
+    Args:
+        audit_records: List of AuditEventRecord from database.
+
+    Returns:
+        List of domain AuditEvent objects in sequence order.
+    """
+    events = []
+    for record in audit_records:
+        metadata = record.to_metadata_dict()
+        event = AuditEvent(
+            event_id=record.event_id,
+            event_type=record.event_type,
+            description=record.description,
+            timestamp=record.timestamp,
+            metadata=metadata,
+        )
+        events.append(event)
+    return events
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan handler for startup and shutdown."""
@@ -82,10 +113,81 @@ async def lifespan(app: FastAPI):
     app.state.db_session_factory = session_factory
     app.state.persistence_service = persistence_service
 
-    # Initialize the first mission run (creates run + initial snapshot + audit)
-    # This runs once on startup, not on every request
-    initial_mission = mission_service.get_mission()
-    persistence_service.create_initial_run(initial_mission)
+    # STARTUP RESTORATION FLOW
+    # 1. Get seed mission (deterministic structural baseline)
+    seed_mission = get_seed_mission()
+
+    # 2. Query latest unfinished run for the seed mission
+    with session_factory() as session:
+        run_repo = MissionRunRepository(session)
+        unfinished_run = run_repo.get_latest_unfinished(seed_mission.mission_id)
+
+    if unfinished_run is not None:
+        # 3a. Unfinished run exists — restore from it
+        run_id = unfinished_run.run_id
+
+        # 3b. Get latest snapshot for this run
+        with session_factory() as session:
+            snapshot_repo = MissionSnapshotRepository(session)
+            latest_snapshot = snapshot_repo.get_latest_for_run(run_id)
+
+        # 3c. Get persisted audit events for this run
+        with session_factory() as session:
+            audit_repo = AuditEventRepository(session)
+            audit_records = audit_repo.list_for_run(run_id)
+
+        # 3d. Reconstruct audit events
+        audit_events = _reconstruct_audit_events(audit_records)
+
+        # 3e. Reconstruct Mission from snapshot + audit + seed
+        restoration_failed = False
+        restored_mission = None
+        if latest_snapshot is not None:
+            snapshot_data = {
+                "status": latest_snapshot.status,
+                "elapsed_s": latest_snapshot.elapsed_s,
+                "resources_json": latest_snapshot.resources_json,
+                "active_route_json": latest_snapshot.active_route_json,
+                "anomaly_active": latest_snapshot.anomaly_active,
+            }
+            try:
+                restored_mission = MissionService.restore_from_snapshot(
+                    snapshot_data, audit_events, seed_mission
+                )
+            except (json.JSONDecodeError, ValueError, KeyError, TypeError):
+                # Snapshot reconstruction failed (malformed JSON,
+                # invalid Pydantic values, etc.)
+                restoration_failed = True
+        else:
+            # 3f. No snapshot for unfinished run — corrupt/invalid
+            restoration_failed = True
+
+        if restoration_failed:
+            # End the unusable run to avoid repeated restoration attempts
+            with session_factory() as session:
+                run_repo = MissionRunRepository(session)
+                run_repo.mark_ended(run_id, "RESTORATION_FAILED")
+                session.commit()
+            # Proceed to create fresh run below
+            unfinished_run = None
+
+        if unfinished_run is not None:
+            # 3g. Load restored mission into MissionService via public API
+            mission_service.restore(restored_mission)
+
+            # 3h. Attach persistence service to existing run
+            persistence_service.restore_current_run(
+                run_id, restored_mission, latest_snapshot, audit_records
+            )
+        else:
+            # Fall through to create new run
+            initial_mission = mission_service.get_mission()
+            persistence_service.create_initial_run(initial_mission)
+    else:
+        # 4. No unfinished run — retain Phase 2B behavior
+        # Create new run with initial snapshot and audit
+        initial_mission = mission_service.get_mission()
+        persistence_service.create_initial_run(initial_mission)
 
     # Start telemetry background task
     telemetry_task = asyncio.create_task(telemetry_loop(telemetry_service, ws_manager))

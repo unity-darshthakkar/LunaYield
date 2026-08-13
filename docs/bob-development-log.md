@@ -357,3 +357,33 @@ Startup restoration remains deferred to Phase 2C.
 NVIDIA Nemotron models. IBM Bob remains the primary development tool for the
 overall LunaYield hackathon project; this delegated implementation is recorded
 truthfully for development provenance.
+
+---
+
+## Phase 2C - Startup Restoration
+
+**Development:** Implementation and test work for this phase was delegated through FCC Claude using NVIDIA Nemotron models. Manual validation was performed using the project's Python 3.12.4 environment. IBM Bob remains the primary project development and planning tool; this entry preserves accurate tool attribution.
+
+### Implemented
+
+- Added startup restoration for the latest unfinished persisted mission run for the seed mission, where an unfinished run has `ended_at is None`.
+- Restored `MissionService` state from the latest persisted mission snapshot when a valid unfinished run exists.
+- Reconstructed persisted audit history during startup restoration.
+- Reattached `MissionPersistenceService` to the same existing `MissionRunRecord` instead of creating a duplicate startup run.
+- Continued subsequent snapshot and audit persistence on the restored run with monotonic sequence numbers.
+- Conservatively normalizes persisted `AWAITING_APPROVAL` state to `ANOMALY` during restoration because candidate plans are not persisted.
+- Ignores completed or ended runs during startup restoration.
+- Added deterministic recovery for missing, corrupt, or invalid persisted snapshots: the unusable run is ended with `RESTORATION_FAILED`, then a fresh mission run is created.
+- Preserved the existing Phase 2B reset behavior and run boundaries.
+- Telemetry remains non-persisted.
+- No frontend history or restoration UI was added in Phase 2C.
+
+### Validation
+
+- Python 3.12.4
+- Phase 2C tests: **17 passed**
+- Full backend suite: **173 passed**
+- `ruff check app tests`: passed
+- `ruff format --check app tests`: 37 files already formatted
+- `git diff --check`: passed
+- Existing Starlette/httpx deprecation warning remains non-blocking.

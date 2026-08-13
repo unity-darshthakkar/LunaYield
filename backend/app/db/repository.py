@@ -88,6 +88,23 @@ class MissionRunRepository:
         )
         return list(self._session.exec(stmt).all())
 
+    def get_latest_unfinished(self, mission_id: str) -> MissionRunRecord | None:
+        """Get the latest unfinished mission run for a mission.
+
+        An unfinished run is one where ended_at is None.
+        Uses deterministic ordering: started_at DESC, then id DESC.
+        """
+        stmt = (
+            select(MissionRunRecord)
+            .where(
+                MissionRunRecord.mission_id == mission_id,
+                MissionRunRecord.ended_at.is_(None),
+            )
+            .order_by(MissionRunRecord.started_at.desc(), MissionRunRecord.id.desc())
+            .limit(1)
+        )
+        return self._session.exec(stmt).first()
+
 
 class MissionSnapshotRepository:
     """Repository for mission snapshot persistence."""

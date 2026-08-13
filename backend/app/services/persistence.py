@@ -218,6 +218,35 @@ class MissionPersistenceService:
 
         return run
 
+    def restore_current_run(
+        self, run_id: str, mission: Mission, snapshot, audit_events: list
+    ) -> None:
+        """Attach persistence service to an existing run for startup restoration.
+
+        Initializes internal state so future snapshots and audit events continue
+        from the database sequence state.
+
+        Args:
+            run_id: The existing run ID to attach to.
+            mission: The restored mission domain model (from snapshot + audit).
+            snapshot: The latest MissionSnapshotRecord for this run.
+            audit_events: List of AuditEventRecords for this run in sequence order.
+        """
+        self._current_run_id = run_id
+
+        # Set snapshot sequence to continue from the latest
+        self._next_snapshot_sequence = snapshot.sequence + 1 if snapshot else 1
+
+        # Set audit count to the number of persisted audit events
+        self._persisted_audit_count = len(audit_events)
+
+        # Verify the mission's audit trail matches the restored events
+        # (ensures consistency between in-memory and persisted state)
+        if len(mission.audit_trail) != self._persisted_audit_count:
+            # This is defensive; the mission should be reconstructed with exactly
+            # the persisted audit events. If counts mismatch, reset to safe state.
+            self._persisted_audit_count = len(mission.audit_trail)
+
 
 def create_persistence_service_from_config(
     config: DatabaseConfig,
