@@ -43,11 +43,16 @@ async def list_mission_runs(
     mission_id: str,
     request: Request,
     limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
 ) -> MissionRunListResponse:
     """List all mission runs for a given mission."""
     with _get_session_factory(request)() as session:
         run_repo = MissionRunRepository(session)
-        runs = run_repo.list_for_mission(mission_id, limit=limit)
+        runs = run_repo.list_for_mission(
+            mission_id,
+            limit=limit,
+            offset=offset,
+        )
 
     return MissionRunListResponse(
         mission_id=mission_id,
@@ -64,6 +69,7 @@ async def list_mission_runs(
             for r in runs
         ],
         limit=limit,
+        offset=offset,
     )
 
 
