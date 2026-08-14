@@ -550,3 +550,44 @@ truthfully for development provenance.
 - `ruff format --check app tests`: 46 files already formatted
 - `git diff --check`: passed
 - Existing Starlette/httpx and HTTP 422 constant deprecation warnings remain non-blocking.
+
+---
+
+## Phase 3C - Forecasting and Anomaly Integration Hardening
+
+**Development:** Integration and regression test work for this phase was delegated through FCC Claude using NVIDIA Nemotron 3 Ultra 550B-A55B, followed by manual review, cleanup, and validation. Manual validation was performed using the project's Python 3.12.4 environment. IBM Bob remains the primary project development and planning tool.
+
+### Implemented
+
+- Added focused integration and regression coverage for the Phase 3A forecasting and Phase 3B anomaly detection pipeline.
+- Verified healthy current state behavior with and without future anomalies.
+- Verified future warning and critical anomaly detection.
+- Verified current warning plus future critical precedence behavior.
+- Verified current critical versus equal-severity future critical tie-breaking.
+- Added exact threshold crossing coverage.
+- Added multiple-resource forecast anomaly coverage.
+- Verified deterministic anomaly ordering.
+- Verified forecast provenance and `forecast_seconds_ahead` correctness.
+- Verified repeated identical requests produce identical results.
+- Verified forecasting and anomaly requests do not mutate mission state.
+- Verified forecast-derived anomaly values correspond to Phase 3A forecast output.
+- Verified AnomalyDetectionService relies on ForecastingService as the source of future projections.
+- Added regression coverage for `/api/forecast`.
+- Added backward-compatibility coverage for `/api/anomalies`.
+- No production code changes.
+- No LLM calls.
+- No strategy generation.
+- No automatic operator actions.
+- No telemetry persistence.
+- No persistence, restoration, or history semantic changes.
+- No frontend changes.
+
+### Validation
+
+- Python 3.12.4
+- Phase 3C tests: **23 passed**
+- Full backend suite: **247 passed**
+- `ruff check app tests`: passed
+- `ruff format --check app tests`: 47 files already formatted
+- `git diff --check`: passed
+- Existing Starlette/httpx and HTTP 422 constant deprecation warnings remain non-blocking.
