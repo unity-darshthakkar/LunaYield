@@ -512,3 +512,41 @@ truthfully for development provenance.
 - `ruff format --check app tests`: 43 files already formatted
 - `git diff --check`: passed
 - Existing Starlette/httpx and HTTP 422 constant deprecation warnings remain non-blocking.
+
+---
+
+## Phase 3B - Anomaly Detection Foundation
+
+**Development:** Implementation and test work for this phase was delegated through FCC Claude using NVIDIA Nemotron 3 Ultra 550B-A55B, followed by manual review, semantic correction, cleanup, and validation. Manual validation was performed using the project's Python 3.12.4 environment. IBM Bob remains the primary project development and planning tool.
+
+### Implemented
+
+- Added deterministic backend anomaly detection.
+- Added resource anomaly detection for battery, storage, temperature, communications window, and remaining operational time.
+- Added structured anomaly severity and resource schemas.
+- Added explicit provenance for current-state versus forecast-derived anomaly findings.
+- Forecast findings include the number of seconds ahead at which the anomaly is predicted.
+- Added deterministic severity and tie-breaking behavior.
+- Higher severity findings take precedence.
+- Current-state findings take precedence over equal-severity forecast findings.
+- Equal-severity forecast findings preserve the earliest predicted threshold crossing.
+- Added a read-only `/api/anomalies` endpoint.
+- Added optional integration with the Phase 3A deterministic forecasting service.
+- Anomaly detection reads authoritative live state from MissionService and does not mutate mission state.
+- Added focused coverage for normal state, API validation, deterministic behavior, non-mutation, provenance, thresholds, multiple resources, and deduplication.
+- No LLM calls.
+- No strategy generation.
+- No automatic operator actions.
+- No telemetry persistence.
+- No persistence, restoration, or history semantic changes.
+- No frontend changes.
+
+### Validation
+
+- Python 3.12.4
+- Phase 3B tests: **22 passed**
+- Full backend suite: **224 passed**
+- `ruff check app tests`: passed
+- `ruff format --check app tests`: 46 files already formatted
+- `git diff --check`: passed
+- Existing Starlette/httpx and HTTP 422 constant deprecation warnings remain non-blocking.

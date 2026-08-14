@@ -252,6 +252,73 @@ class MissionForecastResponse(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Anomaly Detection schemas (Phase 3B)
+# ---------------------------------------------------------------------------
+
+
+class AnomalySeverity(StrEnum):
+    """Severity levels for anomaly findings."""
+
+    INFO = "INFO"
+    WARNING = "WARNING"
+    CRITICAL = "CRITICAL"
+
+
+class AnomalyResource(StrEnum):
+    """Resource types that can have anomalies."""
+
+    BATTERY = "BATTERY"
+    STORAGE = "STORAGE"
+    TEMPERATURE = "TEMPERATURE"
+    COMM_WINDOW = "COMM_WINDOW"
+    OP_TIME = "OP_TIME"
+
+
+class AnomalyFinding(BaseModel):
+    """A single anomaly finding with resource, severity, observed/forecasted value,
+    threshold, and reason."""
+
+    resource: AnomalyResource = Field(
+        ..., description="The resource type that has an anomaly"
+    )
+    severity: AnomalySeverity = Field(..., description="Severity level of the anomaly")
+    observed_value: float | int = Field(
+        ..., description="The observed or forecasted value that crossed the threshold"
+    )
+    threshold_value: float | int = Field(
+        ..., description="The threshold that was crossed"
+    )
+    reason: str = Field(..., description="Human-readable reason for the anomaly")
+    is_forecast: bool = Field(
+        False, description="Whether this finding is from a forecast"
+    )
+    forecast_seconds_ahead: int | None = Field(
+        None, description="Seconds ahead for forecast findings", ge=0
+    )
+
+
+class AnomalyDetectionResponse(BaseModel):
+    """Response for anomaly detection endpoint."""
+
+    mission_id: str = Field(..., description="Mission identifier")
+    current_elapsed_s: int = Field(
+        ..., description="Current mission elapsed time in seconds", ge=0
+    )
+    anomalies: list[AnomalyFinding] = Field(
+        default_factory=list, description="List of detected anomalies"
+    )
+    anomaly_count: int = Field(
+        ..., description="Total number of anomalies detected", ge=0
+    )
+    has_critical: bool = Field(
+        ..., description="Whether any critical anomalies were detected"
+    )
+    has_warning: bool = Field(
+        ..., description="Whether any warning anomalies were detected"
+    )
+
+
+# ---------------------------------------------------------------------------
 # History API response schemas (Phase 2B)
 # ---------------------------------------------------------------------------
 
