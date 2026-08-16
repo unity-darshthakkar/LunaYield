@@ -11,3 +11,4 @@ export { MissionHeader } from './MissionHeader';
 export { MissionControls } from './MissionControls';
 export { ForecastPanel } from './ForecastPanel';
 export { AnomalyPanel } from './AnomalyPanel';
+export { StrategyPanel } from './StrategyPanel';

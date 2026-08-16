@@ -20,6 +20,7 @@ import {
   useMissionResources,
   useForecast,
   useAnomalies,
+  useStrategies,
 } from './hooks/useMission';
 import { useMissionSocket } from './hooks/useMissionSocket';
 import {
@@ -32,6 +33,7 @@ import {
   MissionControls,
   ForecastPanel,
   AnomalyPanel,
+  StrategyPanel,
 } from './components';
 import type { TelemetrySample } from './types/mission';
 import { PlanStatus } from './types/mission';
@@ -47,7 +49,7 @@ function MissionControl() {
   const originalRoute = useOriginalRoute();
   const anomalyActive = useAnomalyActive();
 
-  // Forecast and Anomaly queries
+  // Forecast, Anomaly, and Strategy queries
   const [forecastHorizon, setForecastHorizon] = useState<number>(3600);
   const {
     data: forecast,
@@ -59,6 +61,11 @@ function MissionControl() {
     isLoading: anomaliesLoading,
     error: anomaliesError,
   } = useAnomalies({ use_forecast: true, forecast_horizon: forecastHorizon });
+  const {
+    data: strategies,
+    isLoading: strategiesLoading,
+    error: strategiesError,
+  } = useStrategies({ use_forecast: true, forecast_horizon: forecastHorizon });
 
   // Find approved plan label from backend-provided candidate plans
   const approvedPlanLabel = candidatePlans.find((p) => p.status === PlanStatus.APPROVED)?.label;
@@ -172,8 +179,8 @@ function MissionControl() {
                 originalRoute={originalRoute}
                 approvedPlanLabel={approvedPlanLabel}
               />
-              {/* Forecast & Anomaly Panels */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {/* Forecast, Anomaly & Strategy Panels */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                 <ForecastPanel
                   forecast={forecast}
                   isLoading={forecastLoading}
@@ -185,6 +192,11 @@ function MissionControl() {
                   anomalies={anomalies}
                   isLoading={anomaliesLoading}
                   error={anomaliesError}
+                />
+                <StrategyPanel
+                  strategies={strategies}
+                  isLoading={strategiesLoading}
+                  error={strategiesError}
                 />
               </div>
             </div>
