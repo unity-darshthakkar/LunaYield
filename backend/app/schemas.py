@@ -319,6 +319,56 @@ class AnomalyDetectionResponse(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Strategy Generation schemas (Phase 4A)
+# ---------------------------------------------------------------------------
+
+
+class StrategyCandidate(BaseModel):
+    """A single strategy candidate for operator review.
+
+    Generated from current mission state, forecast, and anomaly findings.
+    Read-only recommendation — does not mutate mission state.
+    """
+
+    strategy_id: str = Field(..., description="Unique strategy identifier")
+    title: str = Field(..., description="Human-readable strategy title")
+    rationale: str = Field(..., description="Why this strategy is proposed")
+    priority: int = Field(..., ge=1, le=5, description="Priority 1=highest, 5=lowest")
+    affected_resources: list[AnomalyResource] = Field(
+        default_factory=list, description="Resources this strategy addresses"
+    )
+    recommended_actions: list[str] = Field(
+        default_factory=list, description="Concrete actionable steps"
+    )
+    source_anomalies: list[str] = Field(
+        default_factory=list,
+        description="Anomaly identifiers that triggered this strategy",
+    )
+    requires_operator_approval: bool = Field(
+        True,
+        description="Whether operator approval is required (always true for Phase 4A)",
+    )
+
+
+class StrategyGenerationResponse(BaseModel):
+    """Response for strategy generation endpoint."""
+
+    mission_id: str = Field(..., description="Mission identifier")
+    current_elapsed_s: int = Field(
+        ..., description="Current mission elapsed time in seconds", ge=0
+    )
+    strategies: list[StrategyCandidate] = Field(
+        default_factory=list, description="Generated strategy candidates"
+    )
+    strategy_count: int = Field(
+        ..., description="Total number of strategies generated", ge=0
+    )
+    has_critical_priority: bool = Field(
+        ..., description="Whether any priority-1 strategies were generated"
+    )
+
+
+# ---------------------------------------------------------------------------
 # History API response schemas (Phase 2B)
 # ---------------------------------------------------------------------------
 
