@@ -746,3 +746,44 @@ truthfully for development provenance.
 - `git diff --check`: passed
 - Phase 4D quality scan found no `pytest.skip`, vacuous assertions, TODOs, FIXMEs, or placeholder passes.
 - Existing Starlette/httpx and HTTP 422 constant deprecation warnings remain non-blocking.
+
+---
+
+## Phase 5A - Forecast and Anomaly Operator UI
+
+**Development:** Phase 5A frontend implementation was delegated through FCC Claude using NVIDIA Nemotron, followed by manual review, focused repair, API-contract verification, lint/build validation, and authoritative frontend test execution. IBM Bob remains the primary project development and planning tool.
+
+### Implemented
+
+- Added typed frontend models for mission forecasts and anomaly detection responses.
+- Added typed API clients for `GET /api/forecast` and `GET /api/anomalies`.
+- Added TanStack Query hooks for forecast and anomaly retrieval.
+- Added `ForecastPanel` for operator-facing resource forecasts.
+- Added forecast horizon selection from 10 minutes through 8 hours.
+- Displayed forecasted battery, storage, temperature, communication-window, and operational-time values.
+- Added clear forecast metadata including horizon, interval, and forecast-point count.
+- Added loading, error, and empty forecast states.
+- Added `AnomalyPanel` for operator-facing anomaly visibility.
+- Displayed anomaly severity, affected resource, observed value, threshold, and reason.
+- Added explicit current-vs-forecast provenance.
+- Added forecast time-ahead display for predicted anomalies.
+- Added NOMINAL state when no anomalies are detected.
+- Added accessible loading indicators for forecast and anomaly panels.
+- Integrated both panels into the existing Mission Lab layout.
+- Shared the selected forecast horizon between forecast and anomaly queries.
+- Preserved backend-authoritative forecasting and anomaly logic.
+- No forecasting or anomaly business logic was duplicated in React.
+- No strategy generation, validation, approval, or execution UI was added.
+- No backend, persistence, or mission-state mutation behavior was changed.
+
+### Validation
+
+- Frontend lint: passed
+- Frontend production build: passed
+- Frontend tests: **112 passed**
+- Test files: **10 passed**
+- `git diff --check`: passed
+- Forecast API contract verified: `horizon` and `interval`
+- Anomaly API contract verified: `use_forecast` and `forecast_horizon`
+- Phase 5A quality scan found no skipped tests, TODOs, FIXMEs, or placeholder assertions.
+- Existing `PlanComparison.test.tsx` `toBeEmpty` deprecation warning remains non-blocking and is unrelated to Phase 5A.

@@ -100,3 +100,51 @@ export interface PlanApprovalResult {
   audit_event: AuditEvent;
   mission_status: MissionStatus;
 }
+
+// Forecasting types (Phase 3A / Phase 5A)
+export interface ResourceForecast {
+  battery_pct: number;
+  storage_pct: number;
+  temperature_c: number;
+  comm_window_remaining_s: number;
+  op_time_remaining_s: number;
+}
+
+export interface ForecastPoint {
+  forecast_seconds_ahead: number;
+  elapsed_s: number;
+  resources: ResourceForecast;
+}
+
+export interface MissionForecastResponse {
+  mission_id: string;
+  current_elapsed_s: number;
+  current_resources: RoverResources;
+  forecast_horizon_s: number;
+  forecast_tick_interval_s: number;
+  forecast_points: ForecastPoint[];
+}
+
+// Anomaly Detection types (Phase 3B / Phase 5A)
+export type AnomalySeverity = 'INFO' | 'WARNING' | 'CRITICAL';
+
+export type AnomalyResource = 'BATTERY' | 'STORAGE' | 'TEMPERATURE' | 'COMM_WINDOW' | 'OP_TIME';
+
+export interface AnomalyFinding {
+  resource: AnomalyResource;
+  severity: AnomalySeverity;
+  observed_value: number;
+  threshold_value: number;
+  reason: string;
+  is_forecast: boolean;
+  forecast_seconds_ahead: number | null;
+}
+
+export interface AnomalyDetectionResponse {
+  mission_id: string;
+  current_elapsed_s: number;
+  anomalies: AnomalyFinding[];
+  anomaly_count: number;
+  has_critical: boolean;
+  has_warning: boolean;
+}
