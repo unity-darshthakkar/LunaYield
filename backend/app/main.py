@@ -27,6 +27,7 @@ from app.routers import (
     mission,
     planning,
     strategy,
+    validation,
     ws,
 )
 from app.schemas import (
@@ -43,6 +44,7 @@ from app.services.planning import PlanningService
 from app.services.safety import SafetyVerifier
 from app.services.strategy import StrategyService
 from app.services.telemetry import TelemetryService
+from app.services.validation import StrategyValidationService
 from app.ws_manager import WSConnectionManager
 
 
@@ -233,6 +235,7 @@ async def lifespan(app: FastAPI):
     strategy_service = StrategyService(
         mission_service, forecasting_service, anomaly_service
     )
+    validation_service = StrategyValidationService(mission_service)
     ws_manager = WSConnectionManager()
     persistence_service = MissionPersistenceService(session_factory)
 
@@ -247,6 +250,7 @@ async def lifespan(app: FastAPI):
     app.state.forecasting_service = forecasting_service
     app.state.anomaly_service = anomaly_service
     app.state.strategy_service = strategy_service
+    app.state.validation_service = validation_service
     app.state.ws_manager = ws_manager
     app.state.db_engine = engine
     app.state.db_session_factory = session_factory
@@ -369,6 +373,7 @@ def create_app() -> FastAPI:
     application.include_router(forecasting.router)
     application.include_router(anomaly.router)
     application.include_router(strategy.router)
+    application.include_router(validation.router)
     return application
 
 

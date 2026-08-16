@@ -7,6 +7,7 @@ from app.services.planning import PlanningService
 from app.services.safety import SafetyVerifier
 from app.services.strategy import StrategyService
 from app.services.telemetry import TelemetryService
+from app.services.validation import StrategyValidationService
 
 __all__ = [
     "AnomalyDetectionService",
@@ -15,5 +16,6 @@ __all__ = [
     "PlanningService",
     "SafetyVerifier",
     "StrategyService",
+    "StrategyValidationService",
     "TelemetryService",
 ]
