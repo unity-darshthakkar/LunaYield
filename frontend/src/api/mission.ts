@@ -8,6 +8,8 @@ import type {
   MissionForecastResponse,
   AnomalyDetectionResponse,
   StrategyGenerationResponse,
+  StrategyValidationResponse,
+  StrategyApprovalResult,
 } from '../types/mission';
 
 // Scenario response shape from GET /api/scenario
@@ -102,6 +104,22 @@ export interface StrategyParams {
 
 export async function getStrategies(params?: StrategyParams): Promise<StrategyGenerationResponse> {
   const response = await apiClient.get<StrategyGenerationResponse>('/strategies', { params });
+  return response.data;
+}
+
+// Strategy Validation API (Phase 4B / Phase 5C)
+export async function validateStrategies(params?: StrategyParams): Promise<StrategyValidationResponse> {
+  const response = await apiClient.get<StrategyValidationResponse>('/strategies/validate', { params });
+  return response.data;
+}
+
+// Strategy Approval API (Phase 4C / Phase 5C)
+export async function approveStrategy(strategyId: string, params?: StrategyParams): Promise<StrategyApprovalResult> {
+  const response = await apiClient.post<StrategyApprovalResult>(
+    `/strategies/${encodeURIComponent(strategyId)}/approve`,
+    undefined,
+    { params }
+  );
   return response.data;
 }
 

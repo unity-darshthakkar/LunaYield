@@ -3,9 +3,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { useMissionState, useStartMission, useResetMission, useForecast, useAnomalies, useStrategies } from './useMission';
+import { useMissionState, useStartMission, useResetMission, useForecast, useAnomalies, useStrategies, useValidateStrategies, useApproveStrategy } from './useMission';
 import * as missionApi from '../api/mission';
-import type { MissionForecastResponse, AnomalyDetectionResponse, StrategyGenerationResponse, AnomalyResource } from '../types/mission';
+import type { MissionForecastResponse, AnomalyDetectionResponse, StrategyGenerationResponse, StrategyValidationResponse, StrategyApprovalResult, AnomalyResource } from '../types/mission';
 
 // Mock the API
 vi.mock('../api/mission', () => ({
@@ -16,6 +16,8 @@ vi.mock('../api/mission', () => ({
   getForecast: vi.fn(),
   getAnomalies: vi.fn(),
   getStrategies: vi.fn(),
+  validateStrategies: vi.fn(),
+  approveStrategy: vi.fn(),
 }));
 
 const createWrapper = () => {
@@ -392,6 +394,233 @@ describe('useMission hooks', () => {
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
       expect(result.current.data?.has_critical_priority).toBe(false);
       expect(result.current.data?.strategy_count).toBe(2);
+    });
+  });
+
+  describe('useValidateStrategies', () => {
+    const mockValidation: StrategyValidationResponse = {
+      mission_id: 'luna-mission-001',
+      current_elapsed_s: 0,
+      validation_results: [
+        {
+          strategy_id: 'strat-BATTERY-CRITICAL',
+          is_valid: true,
+          rejection_reasons: [],
+        },
+        {
+          strategy_id: 'strat-STORAGE-WARNING',
+          is_valid: false,
+          rejection_reasons: ['Storage strategy conflicts with downlink schedule'],
+        },
+      ],
+      validation_count: 2,
+      all_valid: false,
+    };
+
+    it('fetches validation with default params', async () => {
+      missionApi.validateStrategies.mockResolvedValue(mockValidation);
+
+      const { result } = renderHook(() => useValidateStrategies(), { wrapper: createWrapper() });
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(result.current.data).toEqual(mockValidation);
+      expect(missionApi.validateStrategies).toHaveBeenCalledWith(undefined);
+    });
+
+    it('fetches validation with custom params', async () => {
+      missionApi.validateStrategies.mockResolvedValue(mockValidation);
+
+      const { result } = renderHook(() => useValidateStrategies({ use_forecast: true, forecast_horizon: 3600 }), { wrapper: createWrapper() });
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(missionApi.validateStrategies).toHaveBeenCalledWith({ use_forecast: true, forecast_horizon: 3600 });
+    });
+
+    it('handles error correctly', async () => {
+      const error = new Error('Validation failed');
+      missionApi.validateStrategies.mockRejectedValue(error);
+
+      const { result } = renderHook(() => useValidateStrategies(), { wrapper: createWrapper() });
+
+      await waitFor(() => expect(result.current.isError).toBe(true));
+      expect(result.current.error).toBeDefined();
+    });
+
+    it('returns all_valid flag and validation results', async () => {
+      missionApi.validateStrategies.mockResolvedValue(mockValidation);
+
+      const { result } = renderHook(() => useValidateStrategies({ use_forecast: true, forecast_horizon: 3600 }), { wrapper: createWrapper() });
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(result.current.data?.all_valid).toBe(false);
+      expect(result.current.data?.validation_count).toBe(2);
+      expect(result.current.data?.validation_results[0].is_valid).toBe(true);
+      expect(result.current.data?.validation_results[1].is_valid).toBe(false);
+      expect(result.current.data?.validation_results[1].rejection_reasons).toContain('Storage strategy conflicts with downlink schedule');
+    });
+
+    it('returns all_valid true when all strategies are valid', async () => {
+      const allValidValidation = {
+        ...mockValidation,
+        validation_results: [
+          { strategy_id: 'strat-BATTERY-CRITICAL', is_valid: true, rejection_reasons: [] },
+          { strategy_id: 'strat-STORAGE-WARNING', is_valid: true, rejection_reasons: [] },
+        ],
+        all_valid: true,
+      };
+      missionApi.validateStrategies.mockResolvedValue(allValidValidation);
+
+      const { result } = renderHook(() => useValidateStrategies(), { wrapper: createWrapper() });
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(result.current.data?.all_valid).toBe(true);
+      expect(result.current.data?.validation_count).toBe(2);
+    });
+  });
+
+  describe('useApproveStrategy', () => {
+    const mockApprovalResult: StrategyApprovalResult = {
+      strategy_id: 'strat-BATTERY-CRITICAL',
+      approved: true,
+      approval_status: 'APPROVED',
+      rejection_reasons: [],
+    };
+
+    it('mutates and returns approval result', async () => {
+      missionApi.approveStrategy.mockResolvedValue(mockApprovalResult);
+
+      const { result } = renderHook(() => useApproveStrategy(), { wrapper: createWrapper() });
+
+      result.current.mutate({ strategyId: 'strat-BATTERY-CRITICAL', params: { use_forecast: true, forecast_horizon: 3600 } });
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(result.current.data).toEqual(mockApprovalResult);
+      expect(missionApi.approveStrategy).toHaveBeenCalledWith('strat-BATTERY-CRITICAL', { use_forecast: true, forecast_horizon: 3600 });
+    });
+
+    it('returns approved status correctly', async () => {
+      missionApi.approveStrategy.mockResolvedValue(mockApprovalResult);
+
+      const { result } = renderHook(() => useApproveStrategy(), { wrapper: createWrapper() });
+
+      result.current.mutate({ strategyId: 'strat-BATTERY-CRITICAL' });
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(result.current.data?.approved).toBe(true);
+      expect(result.current.data?.approval_status).toBe('APPROVED');
+    });
+
+    it('returns rejected status with reasons when approval fails', async () => {
+      const rejectedResult: StrategyApprovalResult = {
+        strategy_id: 'strat-BATTERY-CRITICAL',
+        approved: false,
+        approval_status: 'REJECTED',
+        rejection_reasons: ['Insufficient battery for emergency reserve'],
+      };
+      missionApi.approveStrategy.mockResolvedValue(rejectedResult);
+
+      const { result } = renderHook(() => useApproveStrategy(), { wrapper: createWrapper() });
+
+      result.current.mutate({ strategyId: 'strat-BATTERY-CRITICAL' });
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(result.current.data?.approved).toBe(false);
+      expect(result.current.data?.approval_status).toBe('REJECTED');
+      expect(result.current.data?.rejection_reasons).toContain('Insufficient battery for emergency reserve');
+    });
+
+    it('handles validation failed status', async () => {
+      const validationFailedResult: StrategyApprovalResult = {
+        strategy_id: 'strat-BATTERY-CRITICAL',
+        approved: false,
+        approval_status: 'VALIDATION_FAILED',
+        rejection_reasons: ['Strategy failed validation'],
+      };
+      missionApi.approveStrategy.mockResolvedValue(validationFailedResult);
+
+      const { result } = renderHook(() => useApproveStrategy(), { wrapper: createWrapper() });
+
+      result.current.mutate({ strategyId: 'strat-BATTERY-CRITICAL' });
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(result.current.data?.approval_status).toBe('VALIDATION_FAILED');
+    });
+
+    it('handles error correctly', async () => {
+      const error = new Error('Approval failed');
+      missionApi.approveStrategy.mockRejectedValue(error);
+
+      const { result } = renderHook(() => useApproveStrategy(), { wrapper: createWrapper() });
+
+      result.current.mutate({ strategyId: 'strat-BATTERY-CRITICAL' });
+
+      await waitFor(() => expect(result.current.isError).toBe(true));
+      expect(result.current.error).toBeDefined();
+    });
+
+    it('forwards forecast params to approval endpoint', async () => {
+      missionApi.approveStrategy.mockResolvedValue(mockApprovalResult);
+
+      const { result } = renderHook(() => useApproveStrategy(), { wrapper: createWrapper() });
+
+      result.current.mutate({ strategyId: 'strat-BATTERY-CRITICAL', params: { use_forecast: true, forecast_horizon: 7200 } });
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(missionApi.approveStrategy).toHaveBeenCalledWith('strat-BATTERY-CRITICAL', { use_forecast: true, forecast_horizon: 7200 });
+    });
+
+    it('invalidates strategy and validation queries with prefix matching', async () => {
+      const mockApprovalResult: StrategyApprovalResult = {
+        strategy_id: 'strat-BATTERY-CRITICAL',
+        approved: true,
+        approval_status: 'APPROVED',
+        rejection_reasons: [],
+      };
+      missionApi.approveStrategy.mockResolvedValue(mockApprovalResult);
+
+      // Create a queryClient with mock invalidation tracking
+      const queryClient = new QueryClient({
+        defaultOptions: {
+          queries: { retry: false },
+          mutations: { retry: false },
+        },
+      });
+
+      // Track invalidated query keys
+      const invalidatedKeys: ReadonlyArray<unknown>[] = [];
+      const originalInvalidate = queryClient.invalidateQueries.bind(queryClient);
+      queryClient.invalidateQueries = vi.fn((args: { queryKey: ReadonlyArray<unknown> }) => {
+        invalidatedKeys.push(args.queryKey);
+        return originalInvalidate(args);
+      });
+
+      const wrapper = ({ children }: { children: React.ReactNode }) => (
+        <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+      );
+
+      const { result } = renderHook(() => useApproveStrategy(), { wrapper });
+
+      result.current.mutate({ strategyId: 'strat-BATTERY-CRITICAL' });
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+      // Should invalidate queries with prefix ['mission', 'strategies']
+      const strategyInvalidated = invalidatedKeys.some(key =>
+        Array.isArray(key) && key[0] === 'mission' && key[1] === 'strategies'
+      );
+      expect(strategyInvalidated).toBe(true);
+
+      // Should invalidate queries with prefix ['mission', 'validation']
+      const validationInvalidated = invalidatedKeys.some(key =>
+        Array.isArray(key) && key[0] === 'mission' && key[1] === 'validation'
+      );
+      expect(validationInvalidated).toBe(true);
+
+      // Should NOT invalidate mission state
+      const missionStateInvalidated = invalidatedKeys.some(key =>
+        Array.isArray(key) && key[0] === 'mission' && key[1] === 'state'
+      );
+      expect(missionStateInvalidated).toBe(false);
     });
   });
 });

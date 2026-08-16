@@ -21,6 +21,7 @@ import {
   useForecast,
   useAnomalies,
   useStrategies,
+  useValidateStrategies,
 } from './hooks/useMission';
 import { useMissionSocket } from './hooks/useMissionSocket';
 import {
@@ -49,23 +50,32 @@ function MissionControl() {
   const originalRoute = useOriginalRoute();
   const anomalyActive = useAnomalyActive();
 
-  // Forecast, Anomaly, and Strategy queries
+  // Forecast, Anomaly, Strategy, and Validation queries
   const [forecastHorizon, setForecastHorizon] = useState<number>(3600);
+  const forecastParams = { horizon: forecastHorizon, interval: 60 };
+  const anomalyStrategyParams = { use_forecast: true, forecast_horizon: forecastHorizon };
+
   const {
     data: forecast,
     isLoading: forecastLoading,
     error: forecastError,
-  } = useForecast({ horizon: forecastHorizon, interval: 60 });
+  } = useForecast(forecastParams);
   const {
     data: anomalies,
     isLoading: anomaliesLoading,
     error: anomaliesError,
-  } = useAnomalies({ use_forecast: true, forecast_horizon: forecastHorizon });
+  } = useAnomalies(anomalyStrategyParams);
   const {
     data: strategies,
     isLoading: strategiesLoading,
     error: strategiesError,
-  } = useStrategies({ use_forecast: true, forecast_horizon: forecastHorizon });
+  } = useStrategies(anomalyStrategyParams);
+  const {
+    data: validation,
+    isLoading: validationLoading,
+    error: validationError,
+  } = useValidateStrategies(anomalyStrategyParams);
+
 
   // Find approved plan label from backend-provided candidate plans
   const approvedPlanLabel = candidatePlans.find((p) => p.status === PlanStatus.APPROVED)?.label;
@@ -195,8 +205,13 @@ function MissionControl() {
                 />
                 <StrategyPanel
                   strategies={strategies}
+                  validation={validation}
+                  validationError={validationError}
                   isLoading={strategiesLoading}
                   error={strategiesError}
+                  validationLoading={validationLoading}
+                  forecastHorizon={forecastHorizon}
+                  useForecast={true}
                 />
               </div>
             </div>

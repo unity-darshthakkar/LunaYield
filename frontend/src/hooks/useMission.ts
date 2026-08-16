@@ -7,7 +7,7 @@ import {
   UseQueryOptions,
   UseMutationOptions,
 } from '@tanstack/react-query';
-import type { Mission, CandidatePlan, RoverResources, MissionForecastResponse, AnomalyDetectionResponse, StrategyGenerationResponse } from '../types/mission';
+import type { Mission, CandidatePlan, RoverResources, MissionForecastResponse, AnomalyDetectionResponse, StrategyGenerationResponse, StrategyValidationResponse, StrategyApprovalResult } from '../types/mission';
 import {
   getMissionState,
   getScenario,
@@ -21,6 +21,8 @@ import {
   getForecast,
   getAnomalies,
   getStrategies,
+  validateStrategies,
+  approveStrategy,
   type ScenarioResponse,
   type ForecastParams,
   type AnomalyParams,
@@ -38,6 +40,8 @@ export const missionKeys = {
     [...missionKeys.all, 'anomalies', params] as const,
   strategies: (params?: StrategyParams) =>
     [...missionKeys.all, 'strategies', params] as const,
+  validation: (params?: StrategyParams) =>
+    [...missionKeys.all, 'validation', params] as const,
 };
 
 // Query hooks
@@ -100,6 +104,38 @@ export function useStrategies(
     queryFn: () => getStrategies(params),
     staleTime: 2000, // Strategies update periodically
     refetchOnWindowFocus: false,
+    ...options,
+  });
+}
+
+// Strategy Validation hook (Phase 4B / Phase 5C)
+export function useValidateStrategies(
+  params?: StrategyParams,
+  options?: UseQueryOptions<StrategyValidationResponse, Error, StrategyValidationResponse, ReturnType<typeof missionKeys.validation>>
+) {
+  return useQuery({
+    queryKey: missionKeys.validation(params),
+    queryFn: () => validateStrategies(params),
+    staleTime: 2000, // Validation updates periodically
+    refetchOnWindowFocus: false,
+    ...options,
+  });
+}
+
+// Strategy Approval mutation (Phase 4C / Phase 5C)
+export function useApproveStrategy(
+  options?: UseMutationOptions<StrategyApprovalResult, Error, { strategyId: string; params?: StrategyParams }, unknown>
+) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ strategyId, params }) => approveStrategy(strategyId, params),
+    onSuccess: () => {
+      // Invalidate all strategy queries regardless of forecast params
+      queryClient.invalidateQueries({ queryKey: ['mission', 'strategies'] });
+      // Invalidate all validation queries regardless of forecast params
+      queryClient.invalidateQueries({ queryKey: ['mission', 'validation'] });
+      // Strategy approval does NOT mutate mission resources/state
+    },
     ...options,
   });
 }
