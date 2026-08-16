@@ -1,11 +1,17 @@
-/** Strategy Panel - displays generated mission strategy recommendations */
+/** Strategy Panel - displays generated mission strategy recommendations with validation and approval */
 
-import { StrategyGenerationResponse, StrategyCandidate, AnomalyResource } from '../types/mission';
+import { useApproveStrategy } from '../hooks/useMission';
+import { StrategyGenerationResponse, StrategyValidationResponse, StrategyCandidate, AnomalyResource, StrategyApprovalStatus } from '../types/mission';
 
 interface StrategyPanelProps {
   strategies: StrategyGenerationResponse | undefined;
+  validation: StrategyValidationResponse | undefined;
+  validationError: Error | null;
   isLoading: boolean;
   error: Error | null;
+  validationLoading?: boolean;
+  forecastHorizon: number;
+  useForecast: boolean;
 }
 
 function getPriorityStyle(priority: number): {
@@ -70,11 +76,118 @@ function getResourceDisplayName(resource: AnomalyResource): string {
   }
 }
 
+function getValidationStatus(validation: StrategyValidationResponse | undefined, strategyId: string): {
+  isValid: boolean | null;
+  rejectionReasons: string[];
+} | null {
+  if (!validation?.validation_results) return null;
+  const result = validation.validation_results.find(v => v.strategy_id === strategyId);
+  if (!result) return null;
+  return { isValid: result.is_valid, rejectionReasons: result.rejection_reasons };
+}
+
+function getApprovalStatusStyle(status: StrategyApprovalStatus): {
+  bg: string;
+  border: string;
+  text: string;
+  label: string;
+} {
+  switch (status) {
+    case 'APPROVED':
+      return {
+        bg: 'bg-green-900/30',
+        border: 'border-green-800',
+        text: 'text-green-400',
+        label: 'APPROVED',
+      };
+    case 'REJECTED':
+      return {
+        bg: 'bg-red-900/30',
+        border: 'border-red-800',
+        text: 'text-red-400',
+        label: 'REJECTED',
+      };
+    case 'VALIDATION_FAILED':
+      return {
+        bg: 'bg-orange-900/30',
+        border: 'border-orange-800',
+        text: 'text-orange-400',
+        label: 'VALIDATION FAILED',
+      };
+    case 'NOT_FOUND':
+      return {
+        bg: 'bg-gray-900/30',
+        border: 'border-gray-800',
+        text: 'text-gray-400',
+        label: 'NOT FOUND',
+      };
+    case 'ALREADY_APPROVED':
+      return {
+        bg: 'bg-blue-900/30',
+        border: 'border-blue-800',
+        text: 'text-blue-400',
+        label: 'ALREADY APPROVED',
+      };
+    default:
+      return {
+        bg: 'bg-gray-800/30',
+        border: 'border-gray-700',
+        text: 'text-gray-500',
+        label: 'UNKNOWN',
+      };
+  }
+}
+
+type ValidationState =
+  | { kind: 'unavailable'; message: string }
+  | { kind: 'pending' }
+  | { kind: 'missing-for-strategy' }
+  | { kind: 'valid' }
+  | { kind: 'invalid'; reasons: string[] };
+
+function getValidationState(
+  validation: StrategyValidationResponse | undefined,
+  validationError: Error | null,
+  validationLoading: boolean | undefined,
+  strategyId: string
+): ValidationState {
+  // validationError present => unavailable (cannot approve)
+  if (validationError) {
+    return { kind: 'unavailable', message: validationError.message };
+  }
+  // validationLoading true => pending (cannot approve)
+  if (validationLoading) {
+    return { kind: 'pending' };
+  }
+  // validation response absent => awaiting validation (cannot approve)
+  if (!validation) {
+    return { kind: 'pending' };
+  }
+  // validation exists but strategy_id not in results => awaiting validation for this strategy
+  const validationResult = getValidationStatus(validation, strategyId);
+  if (validationResult === null) {
+    return { kind: 'missing-for-strategy' };
+  }
+  // explicit validation result
+  if (validationResult.isValid === true) {
+    return { kind: 'valid' };
+  }
+  // explicit validation result with is_valid === false
+  return { kind: 'invalid', reasons: validationResult.rejectionReasons };
+}
+
 export function StrategyPanel({
   strategies,
+  validation,
+  validationError,
   isLoading,
   error,
+  validationLoading,
+  forecastHorizon,
+  useForecast,
 }: StrategyPanelProps) {
+  const approveStrategyMutation = useApproveStrategy();
+
   if (isLoading) {
     return (
       <div className="bg-gray-900/50 border border-gray-800 rounded-lg p-4">
@@ -153,16 +266,59 @@ export function StrategyPanel({
               PRIORITY 1 ACTIVE
             </span>
           )}
+          {validation && validation.all_valid !== undefined && (
+            <span className={`px-2 py-0.5 text-xs font-mono rounded border ${validation.all_valid
+              ? 'bg-green-900/30 border-green-800 text-green-400'
+              : 'bg-red-900/30 border-red-800 text-red-400'}`}>
+              {validation.all_valid ? 'ALL VALID' : 'VALIDATION FAILED'}
+            </span>
+          )}
+          {validationError && (
+            <span className="px-2 py-0.5 bg-red-900/30 border border-red-800 text-red-400 text-xs font-mono rounded">
+              VALIDATION ERROR
+            </span>
+          )}
           <span className="px-2 py-0.5 bg-gray-800 border border-gray-700 text-gray-400 text-xs font-mono rounded">
             {strategy_count}
           </span>
         </div>
       </div>
 
+      {(validationLoading || approveStrategyMutation.isPending) && !validationError && (
+        <div className="mb-3 p-2 bg-yellow-900/20 border border-yellow-800 rounded text-yellow-400 text-xs font-mono">
+          {validationLoading ? 'VALIDATING STRATEGIES...' : 'PROCESSING APPROVAL...'}
+        </div>
+      )}
+
+      {/* Validation error display */}
+      {validationError && (
+        <div className="mb-3 p-2 bg-red-900/30 border border-red-800 rounded text-red-300 text-xs font-mono">
+          VALIDATION UNAVAILABLE: {validationError.message}
+        </div>
+      )}
+
       <div className="space-y-2 max-h-80 overflow-y-auto">
         {sortedStrategies.map((strategy: StrategyCandidate, index: number) => {
           const style = getPriorityStyle(strategy.priority);
           const isForecast = strategy.source_anomalies.some(id => id.includes('-f'));
+          const isApproving = approveStrategyMutation.isPending &&
+            approveStrategyMutation.variables?.strategyId === strategy.strategy_id;
+
+          // Compute validation state for this strategy
+          const validationState = getValidationState(validation, validationError, validationLoading, strategy.strategy_id);
+          const isExplicitlyValid = validationState.kind === 'valid';
+          const isExplicitlyInvalid = validationState.kind === 'invalid';
+
+          // Approval terminal states
+          const approvalStatus = approveStrategyMutation.data?.strategy_id === strategy.strategy_id
+            ? approveStrategyMutation.data.approval_status
+            : null;
+
+          // Can approve only when explicitly valid, not currently approving, and no terminal approval status
+          const canApprove = strategy.requires_operator_approval &&
+            isExplicitlyValid &&
+            !isApproving &&
+            approvalStatus === null;
 
           return (
             <div
@@ -201,6 +357,41 @@ export function StrategyPanel({
                         FORECAST-BASED
                       </span>
                     )}
+                    {/* Validation status badge */}
+                    {(() => {
+                      switch (validationState.kind) {
+                        case 'valid':
+                          return (
+                            <span className="text-green-400 font-mono text-xs px-1.5 py-0.5 bg-gray-800 rounded border border-green-800">
+                              VALID
+                            </span>
+                          );
+                        case 'invalid':
+                          return (
+                            <span className="text-red-400 font-mono text-xs px-1.5 py-0.5 bg-gray-800 rounded border border-red-800">
+                              INVALID
+                            </span>
+                          );
+                        case 'pending':
+                          return (
+                            <span className="text-yellow-400 font-mono text-xs px-1.5 py-0.5 bg-yellow-900/30 rounded border border-yellow-800">
+                              VALIDATION PENDING
+                            </span>
+                          );
+                        case 'unavailable':
+                          return (
+                            <span className="text-red-400 font-mono text-xs px-1.5 py-0.5 bg-red-900/30 rounded border border-red-800">
+                              VALIDATION UNAVAILABLE
+                            </span>
+                          );
+                        case 'missing-for-strategy':
+                          return (
+                            <span className="text-yellow-400 font-mono text-xs px-1.5 py-0.5 bg-yellow-900/30 rounded border border-yellow-800">
+                              AWAITING VALIDATION
+                            </span>
+                          );
+                      }
+                    })()}
                   </div>
                   <p className="text-gray-300 text-sm leading-relaxed">{strategy.rationale}</p>
 
@@ -223,6 +414,98 @@ export function StrategyPanel({
                       <p className="text-gray-500 text-xs font-mono">
                         {strategy.source_anomalies.join(', ')}
                       </p>
+                    </div>
+                  )}
+
+                  {/* Validation rejection reasons - only when explicitly invalid */}
+                  {isExplicitlyInvalid && validationState.reasons.length > 0 && (
+                    <div className="mt-2 p-2 bg-red-900/20 border border-red-800 rounded">
+                      <p className="text-red-400 text-xs font-mono font-bold mb-1">REJECTION REASONS:</p>
+                      <ul className="space-y-1 pl-4">
+                        {validationState.reasons.map((reason, reasonIndex) => (
+                          <li key={reasonIndex} className="text-red-300 text-xs font-mono list-disc">
+                            {reason}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Approval result display - terminal states */}
+                  {approvalStatus && (
+                    <div className="mt-3 p-2 rounded border">
+                      {(() => {
+                        const statusStyle = getApprovalStatusStyle(approvalStatus);
+                        return (
+                          <div className={`${statusStyle.bg} ${statusStyle.border} ${statusStyle.text} px-2 py-1 font-mono text-xs`}>
+                            APPROVAL: {statusStyle.label}
+                          </div>
+                        );
+                      })()}
+                      {approveStrategyMutation.data?.rejection_reasons.length > 0 && (
+                        <ul className="mt-1 pl-4 space-y-1">
+                          {approveStrategyMutation.data.rejection_reasons.map((reason, reasonIndex) => (
+                            <li key={reasonIndex} className="text-gray-300 text-xs font-mono list-disc">
+                              {reason}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Approval button - only for explicitly valid, non-terminal strategies */}
+                  {canApprove && (
+                    <div className="mt-3">
+                      <button
+                        onClick={() => {
+                          approveStrategyMutation.mutate({
+                            strategyId: strategy.strategy_id,
+                            params: { use_forecast: useForecast, forecast_horizon: forecastHorizon },
+                          });
+                        }}
+                        disabled={approveStrategyMutation.isPending}
+                        className="w-full px-3 py-1.5 bg-blue-500/20 border border-blue-500/30 text-blue-400 font-mono text-xs rounded hover:bg-blue-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {isApproving ? 'APPROVING...' : 'APPROVE STRATEGY'}
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Terminal/blocked states - no button, show status */}
+                  {strategy.requires_operator_approval && !canApprove && !isApproving && !approvalStatus && (
+                    <div className="mt-3">
+                      {(() => {
+                        if (isExplicitlyInvalid) {
+                          return (
+                            <span className="px-3 py-1.5 bg-red-500/20 border border-red-500/30 text-red-400 font-mono text-xs rounded">
+                              CANNOT APPROVE - VALIDATION FAILED
+                            </span>
+                          );
+                        }
+                        if (validationState.kind === 'unavailable') {
+                          return (
+                            <span className="px-3 py-1.5 bg-red-500/20 border border-red-500/30 text-red-400 font-mono text-xs rounded">
+                              CANNOT APPROVE - VALIDATION UNAVAILABLE
+                            </span>
+                          );
+                        }
+                        if (validationState.kind === 'pending' || validationState.kind === 'missing-for-strategy') {
+                          return (
+                            <span className="px-3 py-1.5 bg-yellow-500/20 border border-yellow-500/30 text-yellow-400 font-mono text-xs rounded">
+                              AWAITING VALIDATION
+                            </span>
+                          );
+                        }
+                        return null;
+                      })()}
+                    </div>
+                  )}
+
+                  {/* Approval error */}
+                  {approveStrategyMutation.isError && approveStrategyMutation.variables?.strategyId === strategy.strategy_id && (
+                    <div className="mt-3 p-2 bg-red-900/30 border border-red-800 rounded text-red-300 text-xs font-mono">
+                      APPROVAL FAILED: {approveStrategyMutation.error?.message || 'Unknown error'}
                     </div>
                   )}
                 </div>

@@ -827,3 +827,49 @@ truthfully for development provenance.
 - Forecast provenance convention verified against backend strategy generation: `-f{forecast_seconds_ahead}`
 - Phase 5B quality scan found no skipped tests, TODOs, FIXMEs, `as any`, or placeholder assertions.
 - Existing `PlanComparison.test.tsx` `toBeEmpty` deprecation warning remains non-blocking and unrelated to Phase 5B.
+
+---
+
+## Phase 5C - Strategy Validation and Operator Approval UI
+
+**Development:** Phase 5C frontend implementation was delegated through FCC Claude using NVIDIA Nemotron, followed by iterative manual review, backend-contract verification, safety hardening, lint/build validation, and authoritative frontend test execution. IBM Bob remains the primary project development and planning tool.
+
+### Implemented
+
+- Added typed frontend models for strategy validation responses and strategy approval results.
+- Added frontend API integration for strategy validation and explicit operator approval.
+- Added TanStack Query support for strategy validation.
+- Added an explicit strategy-approval mutation.
+- Integrated backend-authoritative strategy validation into the operator recommendation UI.
+- Added per-strategy VALID, INVALID, VALIDATION PENDING, AWAITING VALIDATION, and VALIDATION UNAVAILABLE states.
+- Added backend-provided rejection-reason visibility for invalid strategies.
+- Added fail-closed approval behavior: approval is available only when the backend explicitly returns `is_valid=true`.
+- Missing, loading, unavailable, or incomplete validation states cannot expose approval controls.
+- Added explicit operator-triggered strategy approval controls.
+- Added approval pending and error presentation.
+- Added rendering for backend approval statuses:
+  - APPROVED
+  - REJECTED
+  - VALIDATION_FAILED
+  - NOT_FOUND
+  - ALREADY_APPROVED
+- Terminal approval responses disable further approval for the affected strategy while leaving other strategies independent.
+- Approval forwards the active forecast context to the backend.
+- Successful approval invalidates strategy and validation query families using stable query-key prefixes.
+- Strategy approval does not invalidate or mutate mission state.
+- No automatic approval behavior was added.
+- No execution controls or execution behavior were added.
+- Approval remains distinct from execution.
+- No backend or persistence behavior was changed.
+
+### Validation
+
+- Frontend lint: passed
+- Frontend production build: passed
+- Frontend tests: **174 passed**
+- Frontend test files: **11 passed**
+- `git diff --check`: passed
+- Phase 5C quality scan found no skipped tests, TODOs, FIXMEs, `as any`, CommonJS `require()`, or placeholder assertions.
+- Validation remains fail-closed unless an explicit backend `is_valid=true` result exists.
+- All backend approval terminal states are represented in the operator UI.
+- Existing `PlanComparison.test.tsx` `toBeEmpty` deprecation warning remains non-blocking and unrelated to Phase 5C.

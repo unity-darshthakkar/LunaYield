@@ -168,3 +168,28 @@ export interface StrategyGenerationResponse {
   strategy_count: number;
   has_critical_priority: boolean;
 }
+
+// Strategy Validation types (Phase 4B / Phase 5C)
+export interface StrategyValidationResult {
+  strategy_id: string;
+  is_valid: boolean;
+  rejection_reasons: string[];
+}
+
+export interface StrategyValidationResponse {
+  mission_id: string;
+  current_elapsed_s: number;
+  validation_results: StrategyValidationResult[];
+  validation_count: number;
+  all_valid: boolean;
+}
+
+// Strategy Approval types (Phase 4C / Phase 5C)
+export type StrategyApprovalStatus = 'APPROVED' | 'REJECTED' | 'VALIDATION_FAILED' | 'NOT_FOUND' | 'ALREADY_APPROVED';
+
+export interface StrategyApprovalResult {
+  strategy_id: string;
+  approved: boolean;
+  approval_status: StrategyApprovalStatus;
+  rejection_reasons: string[];
+}
