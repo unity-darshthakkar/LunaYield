@@ -626,3 +626,39 @@ truthfully for development provenance.
 - `ruff format --check app tests`: 50 files already formatted
 - `git diff --check`: passed
 - Existing Starlette/httpx and HTTP 422 constant deprecation warnings remain non-blocking.
+
+---
+
+## Phase 4B - Strategy Validation and Safety Hardening
+
+**Development:** Strategy validation and safety implementation/test work for this phase was delegated through FCC Claude using NVIDIA Nemotron 3 Ultra 550B-A55B, followed by manual review, cleanup, assertion hardening, formatting, and validation. Manual validation was performed using the project's Python 3.12.4 environment. IBM Bob remains the primary project development and planning tool.
+
+### Implemented
+
+- Added StrategyValidationResult and StrategyValidationResponse schemas.
+- Added deterministic StrategyValidationService.
+- Added backend-authoritative validation for generated strategy candidates.
+- Added validation for strategy identifiers, required text fields, priority bounds, affected resources, recommended actions, source anomaly references, and operator-approval requirements.
+- Added supported-action whitelist enforcement.
+- Invalid strategies are rejected with structured rejection reasons.
+- Added validation for mixed valid and invalid strategy batches.
+- Added deterministic repeatability checks.
+- Added non-mutation validation coverage.
+- Added read-only strategy validation endpoint integration.
+- Added consistency checks between generated strategy validation paths.
+- Strategy validation does not approve or execute strategies.
+- Invalid strategies never become approved or executable.
+- No mission-state mutation.
+- No telemetry persistence.
+- No persistence, restoration, or history semantic changes.
+- No frontend changes.
+
+### Validation
+
+- Python 3.12.4
+- Phase 4B tests: **22 passed**
+- Full backend suite: **283 passed**
+- `ruff check app tests`: passed
+- `ruff format --check app tests`: passed
+- `git diff --check`: passed
+- Existing Starlette/httpx and HTTP 422 constant deprecation warnings remain non-blocking.

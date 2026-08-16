@@ -369,6 +369,37 @@ class StrategyGenerationResponse(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Strategy Validation schemas (Phase 4B)
+# ---------------------------------------------------------------------------
+
+
+class StrategyValidationResult(BaseModel):
+    """Validation result for a single strategy candidate."""
+
+    strategy_id: str = Field(..., description="Strategy identifier")
+    is_valid: bool = Field(..., description="Whether the strategy passed validation")
+    rejection_reasons: list[str] = Field(
+        default_factory=list, description="Reasons for rejection (empty if valid)"
+    )
+
+
+class StrategyValidationResponse(BaseModel):
+    """Response for strategy validation endpoint."""
+
+    mission_id: str = Field(..., description="Mission identifier")
+    current_elapsed_s: int = Field(
+        ..., description="Current mission elapsed time in seconds", ge=0
+    )
+    validation_results: list[StrategyValidationResult] = Field(
+        default_factory=list, description="Validation results per strategy"
+    )
+    validation_count: int = Field(
+        ..., description="Total number of strategies validated", ge=0
+    )
+    all_valid: bool = Field(..., description="Whether all strategies passed validation")
+
+
+# ---------------------------------------------------------------------------
 # History API response schemas (Phase 2B)
 # ---------------------------------------------------------------------------
 
