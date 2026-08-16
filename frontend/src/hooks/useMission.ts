@@ -7,7 +7,7 @@ import {
   UseQueryOptions,
   UseMutationOptions,
 } from '@tanstack/react-query';
-import type { Mission, CandidatePlan, RoverResources, MissionForecastResponse, AnomalyDetectionResponse } from '../types/mission';
+import type { Mission, CandidatePlan, RoverResources, MissionForecastResponse, AnomalyDetectionResponse, StrategyGenerationResponse } from '../types/mission';
 import {
   getMissionState,
   getScenario,
@@ -20,9 +20,11 @@ import {
   approvePlan,
   getForecast,
   getAnomalies,
+  getStrategies,
   type ScenarioResponse,
   type ForecastParams,
   type AnomalyParams,
+  type StrategyParams,
 } from '../api/mission';
 
 // Query keys
@@ -34,6 +36,8 @@ export const missionKeys = {
     [...missionKeys.all, 'forecast', params] as const,
   anomalies: (params?: AnomalyParams) =>
     [...missionKeys.all, 'anomalies', params] as const,
+  strategies: (params?: StrategyParams) =>
+    [...missionKeys.all, 'strategies', params] as const,
 };
 
 // Query hooks
@@ -82,6 +86,19 @@ export function useAnomalies(
     queryKey: missionKeys.anomalies(params),
     queryFn: () => getAnomalies(params),
     staleTime: 2000, // Anomalies update periodically
+    refetchOnWindowFocus: false,
+    ...options,
+  });
+}
+
+export function useStrategies(
+  params?: StrategyParams,
+  options?: UseQueryOptions<StrategyGenerationResponse, Error, StrategyGenerationResponse, ReturnType<typeof missionKeys.strategies>>
+) {
+  return useQuery({
+    queryKey: missionKeys.strategies(params),
+    queryFn: () => getStrategies(params),
+    staleTime: 2000, // Strategies update periodically
     refetchOnWindowFocus: false,
     ...options,
   });

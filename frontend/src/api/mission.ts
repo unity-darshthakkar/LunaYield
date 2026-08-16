@@ -7,6 +7,7 @@ import type {
   TelemetrySample,
   MissionForecastResponse,
   AnomalyDetectionResponse,
+  StrategyGenerationResponse,
 } from '../types/mission';
 
 // Scenario response shape from GET /api/scenario
@@ -90,6 +91,17 @@ export interface AnomalyParams {
 
 export async function getAnomalies(params?: AnomalyParams): Promise<AnomalyDetectionResponse> {
   const response = await apiClient.get<AnomalyDetectionResponse>('/anomalies', { params });
+  return response.data;
+}
+
+// Strategy Generation API (Phase 4A / Phase 5B)
+export interface StrategyParams {
+  use_forecast?: boolean;
+  forecast_horizon?: number;
+}
+
+export async function getStrategies(params?: StrategyParams): Promise<StrategyGenerationResponse> {
+  const response = await apiClient.get<StrategyGenerationResponse>('/strategies', { params });
   return response.data;
 }
 

@@ -6,7 +6,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactNode } from 'react';
 import App from './App';
 import * as missionApi from './api/mission';
-import type { Mission, MissionForecastResponse, AnomalyDetectionResponse } from './types/mission';
+import type { Mission, MissionForecastResponse, AnomalyDetectionResponse, StrategyGenerationResponse, AnomalyResource } from './types/mission';
 
 // Mock the API
 vi.mock('./api/mission', () => ({
@@ -21,6 +21,7 @@ vi.mock('./api/mission', () => ({
   approvePlan: vi.fn(),
   getForecast: vi.fn(),
   getAnomalies: vi.fn(),
+  getStrategies: vi.fn(),
 }));
 
 const createWrapper = () => {
@@ -81,6 +82,14 @@ const mockAnomalies: AnomalyDetectionResponse = {
   has_warning: false,
 };
 
+const mockStrategies: StrategyGenerationResponse = {
+  mission_id: 'luna-mission-001',
+  current_elapsed_s: 0,
+  strategies: [],
+  strategy_count: 0,
+  has_critical_priority: false,
+};
+
 function setupMocks() {
   missionApi.getMissionState.mockResolvedValue(mockMission);
   missionApi.getScenario.mockResolvedValue({
@@ -90,6 +99,7 @@ function setupMocks() {
   });
   missionApi.getForecast.mockResolvedValue(mockForecast);
   missionApi.getAnomalies.mockResolvedValue(mockAnomalies);
+  missionApi.getStrategies.mockResolvedValue(mockStrategies);
 }
 
 describe('App', () => {
@@ -170,7 +180,8 @@ describe('App', () => {
 
     await waitFor(() => {
       expect(screen.getByText('ANOMALY DETECTION')).toBeInTheDocument();
-      expect(screen.getByText('NOMINAL')).toBeInTheDocument();
+      // Both AnomalyPanel and StrategyPanel show NOMINAL
+      expect(screen.getAllByText('NOMINAL')).toHaveLength(2);
     });
   });
 
@@ -183,6 +194,79 @@ describe('App', () => {
       expect(screen.getByText('RESOURCE FORECAST')).toBeInTheDocument();
       expect(screen.getByText('ANOMALY DETECTION')).toBeInTheDocument();
     });
+
+    // Verify no mutation APIs were called
+    expect(missionApi.startMission).not.toHaveBeenCalled();
+    expect(missionApi.pauseMission).not.toHaveBeenCalled();
+    expect(missionApi.resumeMission).not.toHaveBeenCalled();
+    expect(missionApi.resetMission).not.toHaveBeenCalled();
+    expect(missionApi.injectAnomaly).not.toHaveBeenCalled();
+    expect(missionApi.generatePlans).not.toHaveBeenCalled();
+    expect(missionApi.approvePlan).not.toHaveBeenCalled();
+  });
+
+  it('displays strategy panel showing nominal state', async () => {
+    setupMocks();
+
+    render(<App />, { wrapper: createWrapper() });
+
+    await waitFor(() => {
+      expect(screen.getByText('STRATEGY RECOMMENDATIONS')).toBeInTheDocument();
+      // Multiple panels show NOMINAL (AnomalyPanel + StrategyPanel)
+      expect(screen.getAllByText('NOMINAL')).toHaveLength(2);
+    }, { timeout: 5000 });
+  });
+
+  it('displays strategy panel with strategies when generated', async () => {
+    const strategiesWithData = {
+      mission_id: 'luna-mission-001',
+      current_elapsed_s: 0,
+      strategies: [
+        {
+          strategy_id: 'strat-BATTERY-CRITICAL',
+          title: 'Conserve Power',
+          rationale: 'Battery critically low at 12% (threshold: 15%). Immediate power conservation required.',
+          priority: 1,
+          affected_resources: ['BATTERY'] as AnomalyResource[],
+          recommended_actions: ['Disable non-essential science instruments', 'Reduce communication frequency'],
+          source_anomalies: ['BATTERY-CRITICAL'],
+          requires_operator_approval: true,
+        },
+      ],
+      strategy_count: 1,
+      has_critical_priority: true,
+    };
+    missionApi.getMissionState.mockResolvedValue(mockMission);
+    missionApi.getScenario.mockResolvedValue({
+      mission_id: 'luna-mission-001',
+      label: 'Shackleton Rim Survey — Alpha',
+      waypoints: [],
+    });
+    missionApi.getForecast.mockResolvedValue(mockForecast);
+    missionApi.getAnomalies.mockResolvedValue(mockAnomalies);
+    missionApi.getStrategies.mockResolvedValue(strategiesWithData);
+
+    render(<App />, { wrapper: createWrapper() });
+
+    await waitFor(() => {
+      expect(screen.getByText('STRATEGY RECOMMENDATIONS')).toBeInTheDocument();
+      expect(screen.getByText('PRIORITY 1 ACTIVE')).toBeInTheDocument();
+      expect(screen.getByText('Conserve Power')).toBeInTheDocument();
+      expect(screen.getByText('APPROVAL REQUIRED')).toBeInTheDocument();
+      expect(screen.getByText('strat-BATTERY-CRITICAL')).toBeInTheDocument();
+    }, { timeout: 5000 });
+  });
+
+  it('does not mutate mission when viewing strategies', async () => {
+    setupMocks();
+
+    render(<App />, { wrapper: createWrapper() });
+
+    await waitFor(() => {
+      expect(screen.getByText('RESOURCE FORECAST')).toBeInTheDocument();
+      expect(screen.getByText('ANOMALY DETECTION')).toBeInTheDocument();
+      expect(screen.getByText('STRATEGY RECOMMENDATIONS')).toBeInTheDocument();
+    }, { timeout: 5000 });
 
     // Verify no mutation APIs were called
     expect(missionApi.startMission).not.toHaveBeenCalled();

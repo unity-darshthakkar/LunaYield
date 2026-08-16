@@ -3,9 +3,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { useMissionState, useStartMission, useResetMission, useForecast, useAnomalies } from './useMission';
+import { useMissionState, useStartMission, useResetMission, useForecast, useAnomalies, useStrategies } from './useMission';
 import * as missionApi from '../api/mission';
-import type { MissionForecastResponse, AnomalyDetectionResponse } from '../types/mission';
+import type { MissionForecastResponse, AnomalyDetectionResponse, StrategyGenerationResponse, AnomalyResource } from '../types/mission';
 
 // Mock the API
 vi.mock('../api/mission', () => ({
@@ -15,6 +15,7 @@ vi.mock('../api/mission', () => ({
   resetMission: vi.fn(),
   getForecast: vi.fn(),
   getAnomalies: vi.fn(),
+  getStrategies: vi.fn(),
 }));
 
 const createWrapper = () => {
@@ -264,6 +265,133 @@ describe('useMission hooks', () => {
       expect(result.current.data?.has_warning).toBe(false);
       expect(result.current.data?.anomalies[0].is_forecast).toBe(true);
       expect(result.current.data?.anomalies[0].forecast_seconds_ahead).toBe(1800);
+    });
+  });
+
+  describe('useStrategies', () => {
+    const mockStrategies: StrategyGenerationResponse = {
+      mission_id: 'luna-mission-001',
+      current_elapsed_s: 0,
+      strategies: [
+        {
+          strategy_id: 'strat-BATTERY-CRITICAL',
+          title: 'Conserve Power',
+          rationale: 'Battery critically low at 12% (threshold: 15%). Immediate power conservation required.',
+          priority: 1,
+          affected_resources: ['BATTERY'] as AnomalyResource[],
+          recommended_actions: [
+            'Disable non-essential science instruments',
+            'Reduce communication frequency',
+          ],
+          source_anomalies: ['BATTERY-CRITICAL'],
+          requires_operator_approval: true,
+        },
+        {
+          strategy_id: 'strat-STORAGE-WARNING',
+          title: 'Schedule Downlink',
+          rationale: 'Storage high at 82% (threshold: 80%). Plan data offload before storage becomes critical.',
+          priority: 2,
+          affected_resources: ['STORAGE'] as AnomalyResource[],
+          recommended_actions: [
+            'Schedule downlink at next available comms window',
+            'Enable data compression for new collections',
+          ],
+          source_anomalies: ['STORAGE-WARNING'],
+          requires_operator_approval: true,
+        },
+      ],
+      strategy_count: 2,
+      has_critical_priority: true,
+    };
+
+    it('fetches strategies with default params', async () => {
+      missionApi.getStrategies.mockResolvedValue(mockStrategies);
+
+      const { result } = renderHook(() => useStrategies(), { wrapper: createWrapper() });
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(result.current.data).toEqual(mockStrategies);
+      expect(missionApi.getStrategies).toHaveBeenCalledWith(undefined);
+    });
+
+    it('fetches strategies with custom params', async () => {
+      missionApi.getStrategies.mockResolvedValue(mockStrategies);
+
+      const { result } = renderHook(() => useStrategies({ use_forecast: true, forecast_horizon: 3600 }), { wrapper: createWrapper() });
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(missionApi.getStrategies).toHaveBeenCalledWith({ use_forecast: true, forecast_horizon: 3600 });
+    });
+
+    it('handles error correctly', async () => {
+      const error = new Error('Strategy generation failed');
+      missionApi.getStrategies.mockRejectedValue(error);
+
+      const { result } = renderHook(() => useStrategies(), { wrapper: createWrapper() });
+
+      await waitFor(() => expect(result.current.isError).toBe(true));
+      expect(result.current.error).toBeDefined();
+    });
+
+    it('returns critical priority flag when priority 1 strategies exist', async () => {
+      missionApi.getStrategies.mockResolvedValue(mockStrategies);
+
+      const { result } = renderHook(() => useStrategies(), { wrapper: createWrapper() });
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(result.current.data?.has_critical_priority).toBe(true);
+      expect(result.current.data?.strategy_count).toBe(2);
+    });
+
+    it('returns correct strategy data including approval requirement and forecast context', async () => {
+      missionApi.getStrategies.mockResolvedValue(mockStrategies);
+
+      const { result } = renderHook(() => useStrategies({ use_forecast: true, forecast_horizon: 3600 }), { wrapper: createWrapper() });
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(result.current.data?.strategies[0].requires_operator_approval).toBe(true);
+      expect(result.current.data?.strategies[0].priority).toBe(1);
+      expect(result.current.data?.strategies[0].title).toBe('Conserve Power');
+      expect(result.current.data?.strategies[0].affected_resources).toEqual(['BATTERY'] as AnomalyResource[]);
+      expect(result.current.data?.strategies[0].recommended_actions).toContain('Disable non-essential science instruments');
+      expect(result.current.data?.strategies[1].source_anomalies).toContain('STORAGE-WARNING');
+    });
+
+    it('returns no critical priority when all strategies are priority 2+', async () => {
+      const noCriticalStrategies = {
+        ...mockStrategies,
+        strategies: [
+          {
+            strategy_id: 'strat-BATTERY-WARNING',
+            title: 'Monitor Power',
+            rationale: 'Battery low at 28% (threshold: 30%). Proactive power management recommended.',
+            priority: 2,
+            affected_resources: ['BATTERY'] as AnomalyResource[],
+            recommended_actions: ['Reduce science duty cycle by 50%'],
+            source_anomalies: ['BATTERY-WARNING'],
+            requires_operator_approval: true,
+          },
+          {
+            strategy_id: 'strat-STORAGE-WARNING',
+            title: 'Schedule Downlink',
+            rationale: 'Storage high at 82% (threshold: 80%). Plan data offload.',
+            priority: 3,
+            affected_resources: ['STORAGE'] as AnomalyResource[],
+            recommended_actions: ['Schedule downlink at next available comms window'],
+            source_anomalies: ['STORAGE-WARNING'],
+            requires_operator_approval: true,
+          },
+        ],
+        strategy_count: 2,
+        has_critical_priority: false,
+      };
+      missionApi.getStrategies.mockResolvedValue(noCriticalStrategies);
+
+      const { result } = renderHook(() => useStrategies(), { wrapper: createWrapper() });
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(result.current.data?.has_critical_priority).toBe(false);
+      expect(result.current.data?.strategy_count).toBe(2);
     });
   });
 });

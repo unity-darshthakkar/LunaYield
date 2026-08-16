@@ -148,3 +148,23 @@ export interface AnomalyDetectionResponse {
   has_critical: boolean;
   has_warning: boolean;
 }
+
+// Strategy Generation types (Phase 4A / Phase 5B)
+export interface StrategyCandidate {
+  strategy_id: string;
+  title: string;
+  rationale: string;
+  priority: number; // 1 = highest, 5 = lowest
+  affected_resources: AnomalyResource[];
+  recommended_actions: string[];
+  source_anomalies: string[];
+  requires_operator_approval: boolean;
+}
+
+export interface StrategyGenerationResponse {
+  mission_id: string;
+  current_elapsed_s: number;
+  strategies: StrategyCandidate[];
+  strategy_count: number;
+  has_critical_priority: boolean;
+}
