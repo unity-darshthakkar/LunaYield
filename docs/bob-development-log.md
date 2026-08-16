@@ -591,3 +591,158 @@ truthfully for development provenance.
 - `ruff format --check app tests`: 47 files already formatted
 - `git diff --check`: passed
 - Existing Starlette/httpx and HTTP 422 constant deprecation warnings remain non-blocking.
+
+---
+
+## Phase 4A - Strategy Generation Foundation
+
+**Development:** Strategy generation implementation and test work for this phase was delegated through FCC Claude using NVIDIA Nemotron 3 Ultra 550B-A55B, followed by manual review, cleanup, formatting, and validation. Manual validation was performed using the project's Python 3.12.4 environment. IBM Bob remains the primary project development and planning tool.
+
+### Implemented
+
+- Added StrategyCandidate and StrategyGenerationResponse Pydantic schemas.
+- Added StrategyService for structured, read-only mission strategy generation.
+- Strategy generation consumes authoritative MissionService state, deterministic ForecastingService output, and AnomalyDetectionService findings.
+- Added deterministic fallback strategy generation with no LLM dependency.
+- Added structured strategy identifiers, titles, rationales, priorities, affected resources, recommended actions, source anomalies, and operator-approval requirements.
+- Added deterministic prioritization and deduplication of strategy candidates.
+- Added read-only `/api/strategies` endpoint.
+- Added optional forecast-aware strategy generation.
+- All generated strategies require operator approval.
+- Strategy generation does not approve, execute, or mutate mission state.
+- Added validation coverage for healthy state, single and multiple anomalies, fallback behavior, invalid candidates, schema validation, deterministic behavior, non-mutation, operator approval, no automatic execution, deduplication, forecast provenance, horizon validation, and priority ordering.
+- No approval endpoint.
+- No execution endpoint.
+- No telemetry persistence.
+- No persistence, restoration, or history semantic changes.
+- No frontend changes.
+
+### Validation
+
+- Python 3.12.4
+- Phase 4A tests: **14 passed**
+- Full backend suite: **261 passed**
+- `ruff check app tests`: passed
+- `ruff format --check app tests`: 50 files already formatted
+- `git diff --check`: passed
+- Existing Starlette/httpx and HTTP 422 constant deprecation warnings remain non-blocking.
+
+---
+
+## Phase 4B - Strategy Validation and Safety Hardening
+
+**Development:** Strategy validation and safety implementation/test work for this phase was delegated through FCC Claude using NVIDIA Nemotron 3 Ultra 550B-A55B, followed by manual review, cleanup, assertion hardening, formatting, and validation. Manual validation was performed using the project's Python 3.12.4 environment. IBM Bob remains the primary project development and planning tool.
+
+### Implemented
+
+- Added StrategyValidationResult and StrategyValidationResponse schemas.
+- Added deterministic StrategyValidationService.
+- Added backend-authoritative validation for generated strategy candidates.
+- Added validation for strategy identifiers, required text fields, priority bounds, affected resources, recommended actions, source anomaly references, and operator-approval requirements.
+- Added supported-action whitelist enforcement.
+- Invalid strategies are rejected with structured rejection reasons.
+- Added validation for mixed valid and invalid strategy batches.
+- Added deterministic repeatability checks.
+- Added non-mutation validation coverage.
+- Added read-only strategy validation endpoint integration.
+- Added consistency checks between generated strategy validation paths.
+- Strategy validation does not approve or execute strategies.
+- Invalid strategies never become approved or executable.
+- No mission-state mutation.
+- No telemetry persistence.
+- No persistence, restoration, or history semantic changes.
+- No frontend changes.
+
+### Validation
+
+- Python 3.12.4
+- Phase 4B tests: **22 passed**
+- Full backend suite: **283 passed**
+- `ruff check app tests`: passed
+- `ruff format --check app tests`: passed
+- `git diff --check`: passed
+- Existing Starlette/httpx and HTTP 422 constant deprecation warnings remain non-blocking.
+
+---
+
+## Phase 4C - Operator Approval Flow
+
+**Development:** Operator approval implementation and test work for this phase was delegated through FCC Claude using NVIDIA Nemotron 3 Ultra 550B-A55B, followed by manual review, safety-test hardening, formatting, and validation. Manual validation was performed using the project's Python 3.12.4 environment. IBM Bob remains the primary project development and planning tool.
+
+### Implemented
+
+- Added explicit strategy approval schemas and approval status handling.
+- Added deterministic `StrategyApprovalService`.
+- Added explicit operator-triggered strategy approval.
+- Approval only considers strategies present in the current generated strategy set.
+- Mandatory `StrategyValidationService` validation occurs before approval.
+- Invalid strategies cannot be approved.
+- Strategies with `requires_operator_approval=False` fail mandatory validation.
+- Added in-memory approval state for Phase 4C.
+- Added idempotent approval behavior:
+  - first approval returns `APPROVED`
+  - repeated approval returns `ALREADY_APPROVED`
+- Added POST `/api/strategies/{strategy_id}/approve`.
+- Approval returns structured strategy ID, approval result, approval status, and rejection reasons.
+- Approval does not execute recommended actions.
+- Approval does not mutate mission resource state.
+- Approval does not bypass strategy validation.
+- Added coverage for unknown strategies, validation failures, explicit operator action, non-execution, non-mutation, idempotency, and unchanged generated strategies.
+- Preserved Phase 4A strategy generation behavior.
+- Preserved Phase 4B validation behavior.
+- No execution endpoint added.
+- No telemetry persistence changes.
+- No persistence, restoration, or history semantic changes.
+- No frontend changes.
+
+### Validation
+
+- Python 3.12.4
+- Phase 4C tests: **13 passed**
+- Full backend suite: **296 passed**
+- `ruff check app tests`: passed
+- `ruff format --check app tests`: 56 files already formatted
+- `git diff --check`: passed
+- Phase 4C test quality scan found no `pytest.skip`, vacuous assertions, TODOs, FIXMEs, or placeholder passes.
+- Existing Starlette/httpx and HTTP 422 constant deprecation warnings remain non-blocking.
+
+---
+
+## Phase 4D - Strategy Pipeline Integration and Safety Hardening
+
+**Development:** Phase 4 integration and safety-hardening test work was delegated through FCC Claude using NVIDIA Nemotron 3 Ultra 550B-A55B, followed by manual review, test-design corrections, lint cleanup, and authoritative validation using the project's Python 3.12.4 environment. IBM Bob remains the primary project development and planning tool.
+
+### Implemented
+
+- Added focused Phase 4 integration coverage across strategy generation, validation, and operator approval.
+- Verified generated strategies can be validated and then explicitly approved.
+- Verified invalid strategies cannot reach approved state.
+- Verified approval depends on membership in the current generated strategy set.
+- Verified approval passes through `StrategyValidationService`.
+- Verified approval does not mutate mission resources.
+- Verified strategy generation remains deterministic.
+- Verified validation remains deterministic.
+- Verified approval remains deterministic and idempotent.
+- Verified clearing in-memory approval state removes prior approval and requires explicit re-approval.
+- Verified unknown and stale strategy identifiers are rejected appropriately.
+- Verified new application lifespans do not restore in-memory approval state.
+- Verified reset/restart behavior does not create automatic approval or execution.
+- Verified strategy-related GET and validation operations do not trigger approval.
+- Verified no strategy execution endpoint exists.
+- Verified strategy operations do not introduce telemetry/audit persistence changes.
+- Preserved Phase 4A strategy-generation behavior.
+- Preserved Phase 4B validation behavior.
+- Preserved Phase 4C operator-approval behavior.
+- No production service, schema, router, persistence, or frontend behavior changed in Phase 4D.
+- No execution service or execution endpoint added.
+
+### Validation
+
+- Python 3.12.4
+- Phase 4D tests: **22 passed**
+- Full backend suite: **318 passed**
+- `ruff check app tests`: passed
+- `ruff format --check app tests`: passed
+- `git diff --check`: passed
+- Phase 4D quality scan found no `pytest.skip`, vacuous assertions, TODOs, FIXMEs, or placeholder passes.
+- Existing Starlette/httpx and HTTP 422 constant deprecation warnings remain non-blocking.

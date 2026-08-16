@@ -19,7 +19,18 @@ from app.db.repository import (
     MissionRunRepository,
     MissionSnapshotRepository,
 )
-from app.routers import anomaly, forecasting, health, history, mission, planning, ws
+from app.routers import (
+    anomaly,
+    approval,
+    forecasting,
+    health,
+    history,
+    mission,
+    planning,
+    strategy,
+    validation,
+    ws,
+)
 from app.schemas import (
     AuditEvent,
     Mission,
@@ -27,12 +38,15 @@ from app.schemas import (
 )
 from app.seed import get_seed_mission
 from app.services.anomaly import AnomalyDetectionService
+from app.services.approval import StrategyApprovalService
 from app.services.forecasting import ForecastingService
 from app.services.mission import MissionService
 from app.services.persistence import MissionPersistenceService
 from app.services.planning import PlanningService
 from app.services.safety import SafetyVerifier
+from app.services.strategy import StrategyService
 from app.services.telemetry import TelemetryService
+from app.services.validation import StrategyValidationService
 from app.ws_manager import WSConnectionManager
 
 
@@ -220,6 +234,17 @@ async def lifespan(app: FastAPI):
     telemetry_service = TelemetryService(mission_service)
     forecasting_service = ForecastingService(mission_service)
     anomaly_service = AnomalyDetectionService(mission_service, forecasting_service)
+    strategy_service = StrategyService(
+        mission_service, forecasting_service, anomaly_service
+    )
+    validation_service = StrategyValidationService(mission_service)
+    approval_service = StrategyApprovalService(
+        strategy_service,
+        validation_service,
+        mission_service,
+        forecasting_service,
+        anomaly_service,
+    )
     ws_manager = WSConnectionManager()
     persistence_service = MissionPersistenceService(session_factory)
 
@@ -233,6 +258,9 @@ async def lifespan(app: FastAPI):
     app.state.telemetry_service = telemetry_service
     app.state.forecasting_service = forecasting_service
     app.state.anomaly_service = anomaly_service
+    app.state.strategy_service = strategy_service
+    app.state.validation_service = validation_service
+    app.state.approval_service = approval_service
     app.state.ws_manager = ws_manager
     app.state.db_engine = engine
     app.state.db_session_factory = session_factory
@@ -354,6 +382,9 @@ def create_app() -> FastAPI:
     application.include_router(history.router)
     application.include_router(forecasting.router)
     application.include_router(anomaly.router)
+    application.include_router(strategy.router)
+    application.include_router(validation.router)
+    application.include_router(approval.router)
     return application
 
 
