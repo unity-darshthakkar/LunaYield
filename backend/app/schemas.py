@@ -400,6 +400,34 @@ class StrategyValidationResponse(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Strategy Approval schemas (Phase 4C)
+# ---------------------------------------------------------------------------
+
+
+class StrategyApprovalStatus(StrEnum):
+    """Approval status for a strategy candidate."""
+
+    APPROVED = "APPROVED"
+    REJECTED = "REJECTED"
+    VALIDATION_FAILED = "VALIDATION_FAILED"
+    NOT_FOUND = "NOT_FOUND"
+    ALREADY_APPROVED = "ALREADY_APPROVED"
+
+
+class StrategyApprovalResult(BaseModel):
+    """Result of a strategy approval request."""
+
+    strategy_id: str = Field(..., description="Strategy identifier")
+    approved: bool = Field(..., description="Whether the strategy was approved")
+    approval_status: StrategyApprovalStatus = Field(
+        ..., description="Detailed approval status"
+    )
+    rejection_reasons: list[str] = Field(
+        default_factory=list, description="Reasons if rejected or validation failed"
+    )
+
+
+# ---------------------------------------------------------------------------
 # History API response schemas (Phase 2B)
 # ---------------------------------------------------------------------------
 

@@ -1,6 +1,7 @@
 """Services package exports."""
 
 from app.services.anomaly import AnomalyDetectionService
+from app.services.approval import StrategyApprovalService
 from app.services.mission import MissionService
 from app.services.persistence import MissionPersistenceService
 from app.services.planning import PlanningService
@@ -17,5 +18,6 @@ __all__ = [
     "SafetyVerifier",
     "StrategyService",
     "StrategyValidationService",
+    "StrategyApprovalService",
     "TelemetryService",
 ]
