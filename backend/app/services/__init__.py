@@ -5,6 +5,7 @@ from app.services.mission import MissionService
 from app.services.persistence import MissionPersistenceService
 from app.services.planning import PlanningService
 from app.services.safety import SafetyVerifier
+from app.services.strategy import StrategyService
 from app.services.telemetry import TelemetryService
 
 __all__ = [
@@ -13,5 +14,6 @@ __all__ = [
     "MissionPersistenceService",
     "PlanningService",
     "SafetyVerifier",
+    "StrategyService",
     "TelemetryService",
 ]

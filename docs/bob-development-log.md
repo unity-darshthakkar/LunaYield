@@ -591,3 +591,38 @@ truthfully for development provenance.
 - `ruff format --check app tests`: 47 files already formatted
 - `git diff --check`: passed
 - Existing Starlette/httpx and HTTP 422 constant deprecation warnings remain non-blocking.
+
+---
+
+## Phase 4A - Strategy Generation Foundation
+
+**Development:** Strategy generation implementation and test work for this phase was delegated through FCC Claude using NVIDIA Nemotron 3 Ultra 550B-A55B, followed by manual review, cleanup, formatting, and validation. Manual validation was performed using the project's Python 3.12.4 environment. IBM Bob remains the primary project development and planning tool.
+
+### Implemented
+
+- Added StrategyCandidate and StrategyGenerationResponse Pydantic schemas.
+- Added StrategyService for structured, read-only mission strategy generation.
+- Strategy generation consumes authoritative MissionService state, deterministic ForecastingService output, and AnomalyDetectionService findings.
+- Added deterministic fallback strategy generation with no LLM dependency.
+- Added structured strategy identifiers, titles, rationales, priorities, affected resources, recommended actions, source anomalies, and operator-approval requirements.
+- Added deterministic prioritization and deduplication of strategy candidates.
+- Added read-only `/api/strategies` endpoint.
+- Added optional forecast-aware strategy generation.
+- All generated strategies require operator approval.
+- Strategy generation does not approve, execute, or mutate mission state.
+- Added validation coverage for healthy state, single and multiple anomalies, fallback behavior, invalid candidates, schema validation, deterministic behavior, non-mutation, operator approval, no automatic execution, deduplication, forecast provenance, horizon validation, and priority ordering.
+- No approval endpoint.
+- No execution endpoint.
+- No telemetry persistence.
+- No persistence, restoration, or history semantic changes.
+- No frontend changes.
+
+### Validation
+
+- Python 3.12.4
+- Phase 4A tests: **14 passed**
+- Full backend suite: **261 passed**
+- `ruff check app tests`: passed
+- `ruff format --check app tests`: 50 files already formatted
+- `git diff --check`: passed
+- Existing Starlette/httpx and HTTP 422 constant deprecation warnings remain non-blocking.
