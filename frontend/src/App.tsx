@@ -18,6 +18,8 @@ import {
   useAnomalyActive,
   useMissionStatus,
   useMissionResources,
+  useForecast,
+  useAnomalies,
 } from './hooks/useMission';
 import { useMissionSocket } from './hooks/useMissionSocket';
 import {
@@ -28,6 +30,8 @@ import {
   PlanComparison,
   AuditPanel,
   MissionControls,
+  ForecastPanel,
+  AnomalyPanel,
 } from './components';
 import type { TelemetrySample } from './types/mission';
 import { PlanStatus } from './types/mission';
@@ -42,6 +46,19 @@ function MissionControl() {
   const activeRoute = useActiveRoute();
   const originalRoute = useOriginalRoute();
   const anomalyActive = useAnomalyActive();
+
+  // Forecast and Anomaly queries
+  const [forecastHorizon, setForecastHorizon] = useState<number>(3600);
+  const {
+    data: forecast,
+    isLoading: forecastLoading,
+    error: forecastError,
+  } = useForecast({ horizon: forecastHorizon, interval: 60 });
+  const {
+    data: anomalies,
+    isLoading: anomaliesLoading,
+    error: anomaliesError,
+  } = useAnomalies({ use_forecast: true, forecast_horizon: forecastHorizon });
 
   // Find approved plan label from backend-provided candidate plans
   const approvedPlanLabel = candidatePlans.find((p) => p.status === PlanStatus.APPROVED)?.label;
@@ -155,6 +172,21 @@ function MissionControl() {
                 originalRoute={originalRoute}
                 approvedPlanLabel={approvedPlanLabel}
               />
+              {/* Forecast & Anomaly Panels */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <ForecastPanel
+                  forecast={forecast}
+                  isLoading={forecastLoading}
+                  error={forecastError}
+                  horizon={forecastHorizon}
+                  onHorizonChange={setForecastHorizon}
+                />
+                <AnomalyPanel
+                  anomalies={anomalies}
+                  isLoading={anomaliesLoading}
+                  error={anomaliesError}
+                />
+              </div>
             </div>
 
             {/* Right Column - Controls, Plans, Audit */}

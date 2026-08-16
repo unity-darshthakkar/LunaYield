@@ -5,6 +5,8 @@ import type {
   Mission,
   CandidatePlan,
   TelemetrySample,
+  MissionForecastResponse,
+  AnomalyDetectionResponse,
 } from '../types/mission';
 
 // Scenario response shape from GET /api/scenario
@@ -66,6 +68,28 @@ export async function approvePlan(planId: string): Promise<CandidatePlan> {
   const response = await apiClient.post<CandidatePlan>(
     `/plans/${encodeURIComponent(planId)}/approve`
   );
+  return response.data;
+}
+
+// Forecasting API (Phase 3A / Phase 5A)
+export interface ForecastParams {
+  horizon?: number;
+  interval?: number;
+}
+
+export async function getForecast(params?: ForecastParams): Promise<MissionForecastResponse> {
+  const response = await apiClient.get<MissionForecastResponse>('/forecast', { params });
+  return response.data;
+}
+
+// Anomaly Detection API (Phase 3B / Phase 5A)
+export interface AnomalyParams {
+  use_forecast?: boolean;
+  forecast_horizon?: number;
+}
+
+export async function getAnomalies(params?: AnomalyParams): Promise<AnomalyDetectionResponse> {
+  const response = await apiClient.get<AnomalyDetectionResponse>('/anomalies', { params });
   return response.data;
 }
 
