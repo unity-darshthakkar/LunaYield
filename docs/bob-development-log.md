@@ -746,3 +746,178 @@ truthfully for development provenance.
 - `git diff --check`: passed
 - Phase 4D quality scan found no `pytest.skip`, vacuous assertions, TODOs, FIXMEs, or placeholder passes.
 - Existing Starlette/httpx and HTTP 422 constant deprecation warnings remain non-blocking.
+
+---
+
+## Phase 5A - Forecast and Anomaly Operator UI
+
+**Development:** Phase 5A frontend implementation was delegated through FCC Claude using NVIDIA Nemotron, followed by manual review, focused repair, API-contract verification, lint/build validation, and authoritative frontend test execution. IBM Bob remains the primary project development and planning tool.
+
+### Implemented
+
+- Added typed frontend models for mission forecasts and anomaly detection responses.
+- Added typed API clients for `GET /api/forecast` and `GET /api/anomalies`.
+- Added TanStack Query hooks for forecast and anomaly retrieval.
+- Added `ForecastPanel` for operator-facing resource forecasts.
+- Added forecast horizon selection from 10 minutes through 8 hours.
+- Displayed forecasted battery, storage, temperature, communication-window, and operational-time values.
+- Added clear forecast metadata including horizon, interval, and forecast-point count.
+- Added loading, error, and empty forecast states.
+- Added `AnomalyPanel` for operator-facing anomaly visibility.
+- Displayed anomaly severity, affected resource, observed value, threshold, and reason.
+- Added explicit current-vs-forecast provenance.
+- Added forecast time-ahead display for predicted anomalies.
+- Added NOMINAL state when no anomalies are detected.
+- Added accessible loading indicators for forecast and anomaly panels.
+- Integrated both panels into the existing Mission Lab layout.
+- Shared the selected forecast horizon between forecast and anomaly queries.
+- Preserved backend-authoritative forecasting and anomaly logic.
+- No forecasting or anomaly business logic was duplicated in React.
+- No strategy generation, validation, approval, or execution UI was added.
+- No backend, persistence, or mission-state mutation behavior was changed.
+
+### Validation
+
+- Frontend lint: passed
+- Frontend production build: passed
+- Frontend tests: **112 passed**
+- Test files: **10 passed**
+- `git diff --check`: passed
+- Forecast API contract verified: `horizon` and `interval`
+- Anomaly API contract verified: `use_forecast` and `forecast_horizon`
+- Phase 5A quality scan found no skipped tests, TODOs, FIXMEs, or placeholder assertions.
+- Existing `PlanComparison.test.tsx` `toBeEmpty` deprecation warning remains non-blocking and is unrelated to Phase 5A.
+
+---
+
+## Phase 5B - Strategy Recommendation Operator UI
+
+**Development:** Phase 5B frontend implementation was delegated through FCC Claude using NVIDIA Nemotron, followed by manual review, API-contract verification, provenance verification, lint/build validation, and authoritative frontend test execution. IBM Bob remains the primary project development and planning tool.
+
+### Implemented
+
+- Added typed frontend models for strategy candidates and strategy-generation responses.
+- Added typed API integration for `GET /api/strategies`.
+- Added TanStack Query support through `useStrategies`.
+- Added `StrategyPanel` for read-only operator-facing strategy recommendations.
+- Displayed strategy title, identifier, priority, rationale, affected resources, recommended actions, and source anomalies.
+- Displayed operator-approval-required status from backend-provided strategy data.
+- Added forecast-derived strategy labeling based on the backend-defined `source_anomalies` `-f{forecast_seconds_ahead}` convention.
+- Added priority-aware operator presentation including critical priority visibility.
+- Added loading, error, and no-strategy/NOMINAL states.
+- Integrated strategy recommendations into the existing Mission Lab operator UI.
+- Shared the Phase 5A forecast horizon with forecast-enabled strategy generation.
+- Preserved backend-authoritative strategy generation.
+- No strategy-generation business logic was duplicated in React.
+- Strategy recommendation UI remains read-only.
+- No strategy validation UI was added.
+- No operator approval controls were added.
+- No execution controls or execution behavior were added.
+- No backend, persistence, or mission-state mutation behavior was changed.
+
+### Validation
+
+- Frontend lint: passed
+- Frontend production build: passed
+- Frontend tests: **136 passed**
+- Test files: **11 passed**
+- `git diff --check`: passed
+- Strategy API parameter contract verified: `use_forecast` and `forecast_horizon`
+- Strategy schema contract verified against backend `StrategyCandidate` and `StrategyGenerationResponse`
+- Forecast provenance convention verified against backend strategy generation: `-f{forecast_seconds_ahead}`
+- Phase 5B quality scan found no skipped tests, TODOs, FIXMEs, `as any`, or placeholder assertions.
+- Existing `PlanComparison.test.tsx` `toBeEmpty` deprecation warning remains non-blocking and unrelated to Phase 5B.
+
+---
+
+## Phase 5C - Strategy Validation and Operator Approval UI
+
+**Development:** Phase 5C frontend implementation was delegated through FCC Claude using NVIDIA Nemotron, followed by iterative manual review, backend-contract verification, safety hardening, lint/build validation, and authoritative frontend test execution. IBM Bob remains the primary project development and planning tool.
+
+### Implemented
+
+- Added typed frontend models for strategy validation responses and strategy approval results.
+- Added frontend API integration for strategy validation and explicit operator approval.
+- Added TanStack Query support for strategy validation.
+- Added an explicit strategy-approval mutation.
+- Integrated backend-authoritative strategy validation into the operator recommendation UI.
+- Added per-strategy VALID, INVALID, VALIDATION PENDING, AWAITING VALIDATION, and VALIDATION UNAVAILABLE states.
+- Added backend-provided rejection-reason visibility for invalid strategies.
+- Added fail-closed approval behavior: approval is available only when the backend explicitly returns `is_valid=true`.
+- Missing, loading, unavailable, or incomplete validation states cannot expose approval controls.
+- Added explicit operator-triggered strategy approval controls.
+- Added approval pending and error presentation.
+- Added rendering for backend approval statuses:
+  - APPROVED
+  - REJECTED
+  - VALIDATION_FAILED
+  - NOT_FOUND
+  - ALREADY_APPROVED
+- Terminal approval responses disable further approval for the affected strategy while leaving other strategies independent.
+- Approval forwards the active forecast context to the backend.
+- Successful approval invalidates strategy and validation query families using stable query-key prefixes.
+- Strategy approval does not invalidate or mutate mission state.
+- No automatic approval behavior was added.
+- No execution controls or execution behavior were added.
+- Approval remains distinct from execution.
+- No backend or persistence behavior was changed.
+
+### Validation
+
+- Frontend lint: passed
+- Frontend production build: passed
+- Frontend tests: **174 passed**
+- Frontend test files: **11 passed**
+- `git diff --check`: passed
+- Phase 5C quality scan found no skipped tests, TODOs, FIXMEs, `as any`, CommonJS `require()`, or placeholder assertions.
+- Validation remains fail-closed unless an explicit backend `is_valid=true` result exists.
+- All backend approval terminal states are represented in the operator UI.
+- Existing `PlanComparison.test.tsx` `toBeEmpty` deprecation warning remains non-blocking and unrelated to Phase 5C.
+
+---
+
+## Phase 5D - Integration and Demo Hardening
+
+IBM Bob remained the primary development and planning tool for Phase 5D. Frontend implementation and test repair were delegated through FCC Claude using NVIDIA Nemotron, followed by manual authoritative validation.
+
+### Implemented
+
+- Hardened the integrated operator decision-support workflow:
+  forecast -> anomaly detection -> strategy generation -> validation -> explicit operator approval.
+- Preserved the single shared forecast horizon across forecast, anomaly, strategy, validation, and approval flows.
+- Preserved backend-authoritative, fail-closed approval behavior.
+- Preserved distinct aggregate validation terminology:
+  - ALL VALID
+  - VALIDATION FAILED
+  - VALIDATION PENDING
+  - VALIDATION UNAVAILABLE
+- Preserved per-strategy validation terminology:
+  - VALID
+  - INVALID
+  - VALIDATION PENDING
+  - AWAITING VALIDATION
+  - VALIDATION UNAVAILABLE
+- Forecast-based strategy badges now respect both active forecast mode and backend strategy provenance.
+- Hardened panel independence so individual request failures do not collapse unrelated operator information.
+- Added focused integration regression coverage for:
+  - shared forecast-horizon propagation
+  - panel failure isolation
+  - validation failure and fail-closed approval
+  - nominal/empty states
+  - absence of strategy execution behavior
+  - approval not triggering mission lifecycle/resource mutation
+- Fixed duplicate React keys in sampled forecast rows.
+- No backend business logic, persistence, validation rules, strategy generation rules, approval rules, or mission lifecycle architecture were changed.
+- No execution behavior was introduced.
+- Strategy approval remains explicit operator intent and remains separate from execution.
+
+### Validation
+
+- Frontend lint: passed
+- Frontend production build: passed
+- Frontend tests: 182 passed
+- Frontend test files: 12 passed
+- Phase 5D integration tests: 8 passed
+- git diff --check: passed
+- Focused quality scan found no skipped tests, TODOs, FIXMEs, `as any`, CommonJS `require()`, eslint-disable usage, artificial sleeps, or increased test timeouts.
+- Existing PlanComparison `toBeEmpty` deprecation warning remains non-blocking and unrelated to Phase 5D.
