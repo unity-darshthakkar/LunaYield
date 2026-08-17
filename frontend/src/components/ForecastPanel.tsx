@@ -141,12 +141,12 @@ export function ForecastPanel({
         </div>
       ) : (
         <div className="space-y-2">
-          {sampleIndices.map((idx) => {
+          {sampleIndices.map((idx, sampleIdx) => {
             const point = points[idx];
             const hoursAhead = (point.forecast_seconds_ahead / 3600).toFixed(1);
             return (
               <div
-                key={point.forecast_seconds_ahead}
+                key={`${sampleIdx}-${point.forecast_seconds_ahead}`}
                 className="grid grid-cols-6 gap-2 p-2 bg-gray-800/50 rounded border border-gray-700"
               >
                 <div className="col-span-1 text-right text-gray-400 text-xs font-mono">

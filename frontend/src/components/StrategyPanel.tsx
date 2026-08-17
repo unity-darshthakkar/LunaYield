@@ -138,6 +138,51 @@ function getApprovalStatusStyle(status: StrategyApprovalStatus): {
   }
 }
 
+function getValidationStateStyle(kind: ValidationState['kind']): {
+  bg: string;
+  border: string;
+  text: string;
+  label: string;
+} {
+  switch (kind) {
+    case 'valid':
+      return {
+        bg: 'bg-green-900/30',
+        border: 'border-green-800',
+        text: 'text-green-400',
+        label: 'VALID',
+      };
+    case 'invalid':
+      return {
+        bg: 'bg-red-900/30',
+        border: 'border-red-800',
+        text: 'text-red-400',
+        label: 'INVALID',
+      };
+    case 'pending':
+      return {
+        bg: 'bg-yellow-900/30',
+        border: 'border-yellow-800',
+        text: 'text-yellow-400',
+        label: 'VALIDATION PENDING',
+      };
+    case 'missing-for-strategy':
+      return {
+        bg: 'bg-yellow-900/30',
+        border: 'border-yellow-800',
+        text: 'text-yellow-400',
+        label: 'AWAITING VALIDATION',
+      };
+    case 'unavailable':
+      return {
+        bg: 'bg-red-900/30',
+        border: 'border-red-800',
+        text: 'text-red-400',
+        label: 'VALIDATION UNAVAILABLE',
+      };
+  }
+}
+
 type ValidationState =
   | { kind: 'unavailable'; message: string }
   | { kind: 'pending' }
@@ -256,6 +301,56 @@ export function StrategyPanel({
     (a, b) => a.priority - b.priority || a.title.localeCompare(b.title)
   );
 
+  // Compute overall validation state for header badge
+  const getOverallValidationKind = (): 'all_valid' | 'validation_failed' | 'validation_pending' | 'validation_unavailable' => {
+    if (validationError) return 'validation_unavailable';
+    if (validationLoading) return 'validation_pending';
+    if (!validation) return 'validation_pending';
+    if (validation.all_valid) return 'all_valid';
+    return 'validation_failed';
+  };
+  const overallValidationKind = getOverallValidationKind();
+
+  function getOverallValidationStyle(kind: ReturnType<typeof getOverallValidationKind>): {
+    bg: string;
+    border: string;
+    text: string;
+    label: string;
+  } {
+    switch (kind) {
+      case 'all_valid':
+        return {
+          bg: 'bg-green-900/30',
+          border: 'border-green-800',
+          text: 'text-green-400',
+          label: 'ALL VALID',
+        };
+      case 'validation_failed':
+        return {
+          bg: 'bg-red-900/30',
+          border: 'border-red-800',
+          text: 'text-red-400',
+          label: 'VALIDATION FAILED',
+        };
+      case 'validation_pending':
+        return {
+          bg: 'bg-yellow-900/30',
+          border: 'border-yellow-800',
+          text: 'text-yellow-400',
+          label: 'VALIDATION PENDING',
+        };
+      case 'validation_unavailable':
+        return {
+          bg: 'bg-red-900/30',
+          border: 'border-red-800',
+          text: 'text-red-400',
+          label: 'VALIDATION UNAVAILABLE',
+        };
+    }
+  }
+
+  const overallValidationStyle = getOverallValidationStyle(overallValidationKind);
+
   return (
     <div className="bg-gray-900/50 border border-gray-800 rounded-lg p-4">
       <div className="flex items-center justify-between mb-3">
@@ -266,18 +361,9 @@ export function StrategyPanel({
               PRIORITY 1 ACTIVE
             </span>
           )}
-          {validation && validation.all_valid !== undefined && (
-            <span className={`px-2 py-0.5 text-xs font-mono rounded border ${validation.all_valid
-              ? 'bg-green-900/30 border-green-800 text-green-400'
-              : 'bg-red-900/30 border-red-800 text-red-400'}`}>
-              {validation.all_valid ? 'ALL VALID' : 'VALIDATION FAILED'}
-            </span>
-          )}
-          {validationError && (
-            <span className="px-2 py-0.5 bg-red-900/30 border border-red-800 text-red-400 text-xs font-mono rounded">
-              VALIDATION ERROR
-            </span>
-          )}
+          <span className={`${overallValidationStyle.bg} ${overallValidationStyle.border} ${overallValidationStyle.text} px-2 py-0.5 text-xs font-mono rounded border`}>
+            {overallValidationStyle.label}
+          </span>
           <span className="px-2 py-0.5 bg-gray-800 border border-gray-700 text-gray-400 text-xs font-mono rounded">
             {strategy_count}
           </span>
@@ -300,12 +386,13 @@ export function StrategyPanel({
       <div className="space-y-2 max-h-80 overflow-y-auto">
         {sortedStrategies.map((strategy: StrategyCandidate, index: number) => {
           const style = getPriorityStyle(strategy.priority);
-          const isForecast = strategy.source_anomalies.some(id => id.includes('-f'));
+          const isForecast = useForecast && strategy.source_anomalies.some(id => id.includes('-f'));
           const isApproving = approveStrategyMutation.isPending &&
             approveStrategyMutation.variables?.strategyId === strategy.strategy_id;
 
           // Compute validation state for this strategy
           const validationState = getValidationState(validation, validationError, validationLoading, strategy.strategy_id);
+          const validationStateStyle = getValidationStateStyle(validationState.kind);
           const isExplicitlyValid = validationState.kind === 'valid';
           const isExplicitlyInvalid = validationState.kind === 'invalid';
 
@@ -357,41 +444,10 @@ export function StrategyPanel({
                         FORECAST-BASED
                       </span>
                     )}
-                    {/* Validation status badge */}
-                    {(() => {
-                      switch (validationState.kind) {
-                        case 'valid':
-                          return (
-                            <span className="text-green-400 font-mono text-xs px-1.5 py-0.5 bg-gray-800 rounded border border-green-800">
-                              VALID
-                            </span>
-                          );
-                        case 'invalid':
-                          return (
-                            <span className="text-red-400 font-mono text-xs px-1.5 py-0.5 bg-gray-800 rounded border border-red-800">
-                              INVALID
-                            </span>
-                          );
-                        case 'pending':
-                          return (
-                            <span className="text-yellow-400 font-mono text-xs px-1.5 py-0.5 bg-yellow-900/30 rounded border border-yellow-800">
-                              VALIDATION PENDING
-                            </span>
-                          );
-                        case 'unavailable':
-                          return (
-                            <span className="text-red-400 font-mono text-xs px-1.5 py-0.5 bg-red-900/30 rounded border border-red-800">
-                              VALIDATION UNAVAILABLE
-                            </span>
-                          );
-                        case 'missing-for-strategy':
-                          return (
-                            <span className="text-yellow-400 font-mono text-xs px-1.5 py-0.5 bg-yellow-900/30 rounded border border-yellow-800">
-                              AWAITING VALIDATION
-                            </span>
-                          );
-                      }
-                    })()}
+                    {/* Validation status badge - uses consistent styling */}
+                    <span className={`${validationStateStyle.bg} ${validationStateStyle.border} ${validationStateStyle.text} px-1.5 py-0.5 font-mono text-xs rounded border`}>
+                      {validationStateStyle.label}
+                    </span>
                   </div>
                   <p className="text-gray-300 text-sm leading-relaxed">{strategy.rationale}</p>
 

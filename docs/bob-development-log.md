@@ -873,3 +873,51 @@ truthfully for development provenance.
 - Validation remains fail-closed unless an explicit backend `is_valid=true` result exists.
 - All backend approval terminal states are represented in the operator UI.
 - Existing `PlanComparison.test.tsx` `toBeEmpty` deprecation warning remains non-blocking and unrelated to Phase 5C.
+
+---
+
+## Phase 5D - Integration and Demo Hardening
+
+IBM Bob remained the primary development and planning tool for Phase 5D. Frontend implementation and test repair were delegated through FCC Claude using NVIDIA Nemotron, followed by manual authoritative validation.
+
+### Implemented
+
+- Hardened the integrated operator decision-support workflow:
+  forecast -> anomaly detection -> strategy generation -> validation -> explicit operator approval.
+- Preserved the single shared forecast horizon across forecast, anomaly, strategy, validation, and approval flows.
+- Preserved backend-authoritative, fail-closed approval behavior.
+- Preserved distinct aggregate validation terminology:
+  - ALL VALID
+  - VALIDATION FAILED
+  - VALIDATION PENDING
+  - VALIDATION UNAVAILABLE
+- Preserved per-strategy validation terminology:
+  - VALID
+  - INVALID
+  - VALIDATION PENDING
+  - AWAITING VALIDATION
+  - VALIDATION UNAVAILABLE
+- Forecast-based strategy badges now respect both active forecast mode and backend strategy provenance.
+- Hardened panel independence so individual request failures do not collapse unrelated operator information.
+- Added focused integration regression coverage for:
+  - shared forecast-horizon propagation
+  - panel failure isolation
+  - validation failure and fail-closed approval
+  - nominal/empty states
+  - absence of strategy execution behavior
+  - approval not triggering mission lifecycle/resource mutation
+- Fixed duplicate React keys in sampled forecast rows.
+- No backend business logic, persistence, validation rules, strategy generation rules, approval rules, or mission lifecycle architecture were changed.
+- No execution behavior was introduced.
+- Strategy approval remains explicit operator intent and remains separate from execution.
+
+### Validation
+
+- Frontend lint: passed
+- Frontend production build: passed
+- Frontend tests: 182 passed
+- Frontend test files: 12 passed
+- Phase 5D integration tests: 8 passed
+- git diff --check: passed
+- Focused quality scan found no skipped tests, TODOs, FIXMEs, `as any`, CommonJS `require()`, eslint-disable usage, artificial sleeps, or increased test timeouts.
+- Existing PlanComparison `toBeEmpty` deprecation warning remains non-blocking and unrelated to Phase 5D.
