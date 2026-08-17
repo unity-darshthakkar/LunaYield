@@ -185,8 +185,8 @@ cd frontend && npx playwright test
 ## Known Phase 1 Limitations
 
 - **No persistence**: All state in-memory; restart loses history
-- **No AI/ML**: Granite TTM, Granite reasoning, OR-Tools — all deferred
-- **No 3D visualization**: Three.js/terrain — Phase 2+
+- **No AI/ML**: No Granite TTM, Granite reasoning, OR-Tools, NetworkX — never implemented
+- **No 3D visualization**: Three.js/terrain — not implemented
 - **Single rover**: No multi-rover coordination
 - **Deterministic only**: No stochastic forecasting, no learned anomaly detection
 - **No authentication**: Single-operator demo mode
