@@ -7,6 +7,7 @@ import { PlanCard } from './PlanCard';
 interface PlanComparisonProps {
   plans: CandidatePlan[];
   onApprove: (planId: string) => void;
+  selectedPlanId?: string | null;
   disabled?: boolean;
   className?: string;
 }
@@ -14,6 +15,7 @@ interface PlanComparisonProps {
 export function PlanComparison({
   plans,
   onApprove,
+  selectedPlanId,
   disabled = false,
   className = '',
 }: PlanComparisonProps) {
@@ -34,6 +36,7 @@ export function PlanComparison({
             key={plan.plan_id}
             plan={plan}
             onApprove={onApprove}
+            isSelected={selectedPlanId === plan.plan_id}
             disabled={disabled}
           />
         ))}

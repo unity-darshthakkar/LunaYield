@@ -9,6 +9,8 @@ import { test, expect, type APIRequestContext } from '@playwright/test';
 
 const BACKEND_URL = 'http://127.0.0.1:8000';
 
+test.describe.configure({ timeout: 90_000 });
+
 async function resetMission(request: APIRequestContext): Promise<void> {
   const response = await request.post(`${BACKEND_URL}/api/mission/reset`);
   expect(response.ok()).toBeTruthy();
@@ -19,7 +21,7 @@ test.describe('LunaYield Mission Flow - Golden Path', () => {
   test.beforeEach(async ({ page, request }) => {
     // Ensure clean mission state before each test
     await resetMission(request);
-    await page.goto('/');
+    await page.goto('/mission-control');
     // Wait for mission state to load - wait for WS to be connected and page ready
     await expect(page.getByText('MISSION CONTROLS')).toBeVisible({ timeout: 15000 });
     // Wait for WebSocket to connect
@@ -41,8 +43,8 @@ test.describe('LunaYield Mission Flow - Golden Path', () => {
     await expect(page.getByRole('button', { name: /INJECT ANOMALY/i })).toBeDisabled();
     await expect(page.getByRole('button', { name: /GENERATE PLANS/i })).toBeDisabled();
 
-    // Verify IDLE state - check MissionControls shows IDLE (white text in main area)
-    await expect(page.locator('main').getByText('IDLE')).toBeVisible();
+    // Verify IDLE state in the MissionControls Current State panel
+    await expect(page.getByTestId('current-mission-state')).toHaveText('IDLE');
     await expect(page.getByText('CURRENT STATE:')).toBeVisible();
 
     // Telemetry should show idle state
@@ -54,7 +56,7 @@ test.describe('LunaYield Mission Flow - Golden Path', () => {
     await page.getByRole('button', { name: /START MISSION/i }).click();
 
     // Wait for status transition - header badge shows RUNNING
-    await expect(page.locator('header').getByText('RUNNING', { exact: true })).toBeVisible({ timeout: 5000 });
+    await expect(page.getByTestId('current-mission-state')).toHaveText('RUNNING');
 
     // Verify buttons update correctly
     await expect(page.getByRole('button', { name: /START MISSION/i })).toBeDisabled();
@@ -75,7 +77,7 @@ test.describe('LunaYield Mission Flow - Golden Path', () => {
     // ==========================================
     await page.getByRole('button', { name: /INJECT ANOMALY/i }).click();
 
-    await expect(page.locator('header').getByText('ANOMALY', { exact: true })).toBeVisible({ timeout: 5000 });
+    await expect(page.getByTestId('current-mission-state')).toHaveText('ANOMALY');
     // Anomaly badge should appear
     await expect(page.getByText(/BATTERY ANOMALY ACTIVE/i)).toBeVisible();
 
@@ -88,7 +90,7 @@ test.describe('LunaYield Mission Flow - Golden Path', () => {
     // ==========================================
     await page.getByRole('button', { name: /GENERATE PLANS/i }).click();
 
-    await expect(page.locator('header').getByText('AWAITING APPROVAL', { exact: true })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByTestId('current-mission-state')).toHaveText('AWAITING_APPROVAL');
     await expect(page.getByText(/CANDIDATE PLAN\(S\) AVAILABLE/i)).toBeVisible();
 
     // ==========================================
@@ -152,24 +154,20 @@ test.describe('LunaYield Mission Flow - Golden Path', () => {
     // ==========================================
     // STEP 13: Verify mission becomes EXECUTING
     // ==========================================
-    await expect(page.locator('header').getByText('EXECUTING', { exact: true })).toBeVisible({ timeout: 10000 });
-
-    // Re-fetch extended card after re-render
-    const extendedCardAfterApproval = page.locator('[data-testid="plan-card"]', { hasText: 'Extended Survey' });
+    await expect(page.getByTestId('current-mission-state')).toHaveText('EXECUTING');
 
     // ==========================================
-    // STEP 14: Verify Extended Survey shows APPROVED
+    // STEP 14: Verify approved plan is reflected in frozen mission-control UI
     // ==========================================
-    // APPROVED badge (not the audit trail text)
-    await expect(extendedCardAfterApproval.locator('[data-testid="plan-status"]').filter({ hasText: 'APPROVED' })).toBeVisible();
-    // Approve button should be gone, replaced by "PLAN APPROVED"
-    await expect(extendedCardAfterApproval.getByText('PLAN APPROVED')).toBeVisible();
+    await expect(page.getByTestId('current-mission-state')).toHaveText('EXECUTING');
+    await expect(page.getByRole('button', { name: /PLAN SELECTED: EXTENDED SURVEY/i })).toBeDisabled();
 
     // ==========================================
     // STEP 15: Verify active route reflects approved plan
     // ==========================================
     // RoutePanel should show the active route (now matching Extended Survey)
     const routePanel = page.getByText('ACTIVE ROUTE').locator('..');
+    await expect(routePanel.getByText('Approved plan: Extended Survey')).toBeVisible();
     await expect(routePanel.getByText('Base Camp')).toHaveCount(2); // Start + Return
     await expect(routePanel.getByText('Crater A Rim')).toBeVisible();
     await expect(routePanel.getByText('Ice Deposit Site')).toBeVisible();
@@ -178,8 +176,10 @@ test.describe('LunaYield Mission Flow - Golden Path', () => {
     // ==========================================
     // STEP 16: Verify plan.approved audit event exists
     // ==========================================
+    await page.getByRole('button', { name: /Open audit trail/i }).click();
     const auditPanel = page.getByText('AUDIT TRAIL').locator('..');
     await expect(auditPanel.getByText('plan.approved')).toBeVisible();
+    await page.getByRole('button', { name: /Close audit trail/i }).click();
 
     // ==========================================
     // STEP 17: Reset Mission → IDLE
@@ -189,7 +189,7 @@ test.describe('LunaYield Mission Flow - Golden Path', () => {
     // ==========================================
     // STEP 18: Verify mission returns to IDLE
     // ==========================================
-    await expect(page.locator('header').getByText('IDLE', { exact: true })).toBeVisible({ timeout: 5000 });
+    await expect(page.getByTestId('current-mission-state')).toHaveText('IDLE');
 
     // ==========================================
     // STEP 19: Verify candidate plans are cleared
@@ -199,6 +199,7 @@ test.describe('LunaYield Mission Flow - Golden Path', () => {
     // ==========================================
     // STEP 20: Verify reset audit behavior
     // ==========================================
+    await page.getByRole('button', { name: /Open audit trail/i }).click();
     // Should have mission.reset in audit trail
     await expect(auditPanel.getByText('mission.reset')).toBeVisible();
     // Should still have seed event

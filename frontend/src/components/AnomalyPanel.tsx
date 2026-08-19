@@ -55,7 +55,7 @@ function getResourceDisplayName(resource: AnomalyResource): string {
   }
 }
 
-function formatValue(value: number | int, resource: AnomalyResource): string {
+function formatValue(value: number, resource: AnomalyResource): string {
   if (resource === 'TEMPERATURE') return `${value}°C`;
   if (resource === 'COMM_WINDOW' || resource === 'OP_TIME') return `${value}s`;
   return `${value}%`;
@@ -78,7 +78,7 @@ export function AnomalyPanel({
   if (isLoading) {
     return (
       <div className="bg-gray-900/50 border border-gray-800 rounded-lg p-4">
-        <div className="flex items-center justify-between mb-3">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
           <h3 className="text-white font-bold text-sm tracking-wide">ANOMALY DETECTION</h3>
           <div
             role="status"
@@ -97,7 +97,7 @@ export function AnomalyPanel({
 
   if (error) {
     return (
-      <div className="bg-gray-900/50 border border-gray-800 rounded-lg p-4">
+      <div className="glass-panel rounded-2xl border border-gray-800 p-5">
         <div className="flex items-center gap-2 text-red-400 mb-2">
           <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
             <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />
@@ -111,7 +111,7 @@ export function AnomalyPanel({
 
   if (!anomalies) {
     return (
-      <div className="bg-gray-900/50 border border-gray-800 rounded-lg p-4">
+      <div className="glass-panel rounded-2xl border border-gray-800 p-5">
         <h3 className="text-white font-bold text-sm tracking-wide mb-3">ANOMALY DETECTION</h3>
         <p className="text-gray-500 text-sm">No anomaly data available</p>
       </div>
@@ -123,8 +123,8 @@ export function AnomalyPanel({
   // Healthy state
   if (anomaly_count === 0) {
     return (
-      <div className="bg-gray-900/50 border border-gray-800 rounded-lg p-4">
-        <div className="flex items-center gap-2 mb-3">
+      <div className="glass-panel rounded-2xl border border-gray-800 p-5">
+        <div className="mb-3 flex flex-wrap items-center gap-2">
           <h3 className="text-white font-bold text-sm tracking-wide">ANOMALY DETECTION</h3>
           <span className="px-2 py-0.5 bg-green-900/30 border border-green-800 text-green-400 text-xs font-mono rounded">
             NOMINAL
@@ -145,10 +145,10 @@ export function AnomalyPanel({
   );
 
   return (
-    <div className="bg-gray-900/50 border border-gray-800 rounded-lg p-4">
-      <div className="flex items-center justify-between mb-3">
+    <div className="glass-panel rounded-2xl border border-gray-800 p-5">
+      <div className="mb-4 flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
         <h3 className="text-white font-bold text-sm tracking-wide">ANOMALY DETECTION</h3>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {has_critical && (
             <span className="px-2 py-0.5 bg-red-900/30 border border-red-800 text-red-400 text-xs font-mono rounded">
               CRITICAL
@@ -170,7 +170,7 @@ export function AnomalyPanel({
         </div>
       </div>
 
-      <div className="space-y-2 max-h-60 overflow-y-auto">
+      <div className="space-y-3 max-h-[34rem] overflow-y-auto pr-1">
         {sortedFindings.map((finding: AnomalyFinding, index: number) => {
           const style = getSeverityStyle(finding.severity);
           const isForecast = finding.is_forecast;
@@ -179,16 +179,16 @@ export function AnomalyPanel({
           return (
             <div
               key={`${finding.resource}-${finding.severity}-${index}`}
-              className={`${style.bg} ${style.border} border rounded p-3`}
+              className={`${style.bg} ${style.border} rounded-xl border p-4`}
             >
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex items-center gap-2 flex-1 min-w-0">
-                  <span className={`${style.text} text-lg font-mono flex-shrink-0`}>
+              <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+                <div className="flex min-w-0 flex-1 items-start gap-3">
+                  <span className={`${style.text} flex-shrink-0 font-mono text-lg`}>
                     {style.icon}
                   </span>
                   <div className="min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-bold text-white capitalize flex-shrink-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="flex-shrink-0 font-bold capitalize text-white">
                         {finding.severity.toLowerCase()}
                       </span>
                       <span className={`${style.text} font-mono text-xs font-bold px-1.5 py-0.5 bg-gray-800 rounded border border-gray-700`}>
@@ -206,12 +206,18 @@ export function AnomalyPanel({
                     )}
                   </div>
                 </div>
-                <div className="flex flex-col items-end gap-1 text-right flex-shrink-0">
-                  <div className={`${style.text} font-mono text-sm font-bold`}>
-                    {formatValue(finding.observed_value, finding.resource)}
+                <div className="grid min-w-[11rem] grid-cols-2 gap-3 rounded-xl border border-white/10 bg-slate-950/45 p-3 xl:max-w-[12rem] xl:grid-cols-1">
+                  <div>
+                    <p className="mb-1 text-[11px] uppercase tracking-[0.22em] text-gray-500">Observed</p>
+                    <div className={`${style.text} font-mono text-sm font-bold`}>
+                      {formatValue(finding.observed_value, finding.resource)}
+                    </div>
                   </div>
-                  <div className="text-gray-500 text-xs font-mono">
-                    threshold: {formatValue(finding.threshold_value, finding.resource)}
+                  <div className="text-right xl:text-left">
+                    <p className="mb-1 text-[11px] uppercase tracking-[0.22em] text-gray-500">Threshold</p>
+                    <div className="text-gray-400 text-xs font-mono">
+                      {formatValue(finding.threshold_value, finding.resource)}
+                    </div>
                   </div>
                 </div>
               </div>

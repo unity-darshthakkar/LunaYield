@@ -235,8 +235,8 @@ export function StrategyPanel({
 
   if (isLoading) {
     return (
-      <div className="bg-gray-900/50 border border-gray-800 rounded-lg p-4">
-        <div className="flex items-center justify-between mb-3">
+      <div className="glass-panel rounded-2xl border border-gray-800 p-5">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
           <h3 className="text-white font-bold text-sm tracking-wide">STRATEGY RECOMMENDATIONS</h3>
           <div
             role="status"
@@ -255,7 +255,7 @@ export function StrategyPanel({
 
   if (error) {
     return (
-      <div className="bg-gray-900/50 border border-gray-800 rounded-lg p-4">
+      <div className="glass-panel rounded-2xl border border-gray-800 p-5">
         <div className="flex items-center gap-2 text-red-400 mb-2">
           <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
             <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />
@@ -269,7 +269,7 @@ export function StrategyPanel({
 
   if (!strategies) {
     return (
-      <div className="bg-gray-900/50 border border-gray-800 rounded-lg p-4">
+      <div className="glass-panel rounded-2xl border border-gray-800 p-5">
         <h3 className="text-white font-bold text-sm tracking-wide mb-3">STRATEGY RECOMMENDATIONS</h3>
         <p className="text-gray-500 text-sm">No strategy data available</p>
       </div>
@@ -281,8 +281,8 @@ export function StrategyPanel({
   // Empty state
   if (strategy_count === 0) {
     return (
-      <div className="bg-gray-900/50 border border-gray-800 rounded-lg p-4">
-        <div className="flex items-center gap-2 mb-3">
+      <div className="glass-panel rounded-2xl border border-gray-800 p-5">
+        <div className="mb-3 flex flex-wrap items-center gap-2">
           <h3 className="text-white font-bold text-sm tracking-wide">STRATEGY RECOMMENDATIONS</h3>
           <span className="px-2 py-0.5 bg-green-900/30 border border-green-800 text-green-400 text-xs font-mono rounded">
             NOMINAL
@@ -352,10 +352,10 @@ export function StrategyPanel({
   const overallValidationStyle = getOverallValidationStyle(overallValidationKind);
 
   return (
-    <div className="bg-gray-900/50 border border-gray-800 rounded-lg p-4">
-      <div className="flex items-center justify-between mb-3">
+    <div className="glass-panel rounded-2xl border border-gray-800 p-5">
+      <div className="mb-4 flex flex-col gap-3 2xl:flex-row 2xl:items-center 2xl:justify-between">
         <h3 className="text-white font-bold text-sm tracking-wide">STRATEGY RECOMMENDATIONS</h3>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {has_critical_priority && (
             <span className="px-2 py-0.5 bg-red-900/30 border border-red-800 text-red-400 text-xs font-mono rounded">
               PRIORITY 1 ACTIVE
@@ -371,19 +371,19 @@ export function StrategyPanel({
       </div>
 
       {(validationLoading || approveStrategyMutation.isPending) && !validationError && (
-        <div className="mb-3 p-2 bg-yellow-900/20 border border-yellow-800 rounded text-yellow-400 text-xs font-mono">
+        <div className="mb-4 rounded-xl border border-yellow-800 bg-yellow-900/20 p-3 text-xs font-mono text-yellow-400">
           {validationLoading ? 'VALIDATING STRATEGIES...' : 'PROCESSING APPROVAL...'}
         </div>
       )}
 
       {/* Validation error display */}
       {validationError && (
-        <div className="mb-3 p-2 bg-red-900/30 border border-red-800 rounded text-red-300 text-xs font-mono">
+        <div className="mb-4 rounded-xl border border-red-800 bg-red-900/30 p-3 text-xs font-mono text-red-300">
           VALIDATION UNAVAILABLE: {validationError.message}
         </div>
       )}
 
-      <div className="space-y-2 max-h-80 overflow-y-auto">
+      <div className="space-y-4 max-h-[42rem] overflow-y-auto pr-1">
         {sortedStrategies.map((strategy: StrategyCandidate, index: number) => {
           const style = getPriorityStyle(strategy.priority);
           const isForecast = useForecast && strategy.source_anomalies.some(id => id.includes('-f'));
@@ -410,15 +410,16 @@ export function StrategyPanel({
           return (
             <div
               key={`${strategy.strategy_id}-${index}`}
-              className={`${style.bg} ${style.border} border rounded p-3`}
+              data-testid={`strategy-card-${strategy.strategy_id}`}
+              className={`${style.bg} ${style.border} rounded-xl border p-4`}
             >
-              <div className="flex items-start justify-between gap-2">
+              <div className="flex flex-col gap-4 2xl:flex-row 2xl:items-start 2xl:justify-between">
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap mb-2">
+                  <div className="mb-3 flex flex-wrap items-center gap-2">
                     <span className={`${style.text} font-mono text-xs font-bold px-1.5 py-0.5 bg-gray-800 rounded border border-gray-700`}>
                       {style.label}
                     </span>
-                    <span className="font-bold text-white text-sm capitalize flex-shrink-0">
+                    <span className="text-sm font-bold capitalize text-white">
                       {strategy.title}
                     </span>
                     {strategy.affected_resources.length > 0 && (
@@ -449,10 +450,10 @@ export function StrategyPanel({
                       {validationStateStyle.label}
                     </span>
                   </div>
-                  <p className="text-gray-300 text-sm leading-relaxed">{strategy.rationale}</p>
+                  <p className="text-sm leading-relaxed text-gray-300">{strategy.rationale}</p>
 
                   {strategy.recommended_actions.length > 0 && (
-                    <div className="mt-2">
+                    <div className="mt-4 rounded-xl border border-white/10 bg-slate-950/35 p-3">
                       <p className="text-yellow-400 text-xs font-mono font-bold mb-1">RECOMMENDED ACTIONS:</p>
                       <ul className="space-y-1 pl-4">
                         {strategy.recommended_actions.map((action, actionIndex) => (
@@ -465,7 +466,7 @@ export function StrategyPanel({
                   )}
 
                   {strategy.source_anomalies.length > 0 && (
-                    <div className="mt-2">
+                    <div className="mt-3 rounded-xl border border-white/10 bg-slate-950/30 p-3">
                       <p className="text-purple-400 text-xs font-mono font-bold mb-1">SOURCE ANOMALIES:</p>
                       <p className="text-gray-500 text-xs font-mono">
                         {strategy.source_anomalies.join(', ')}
@@ -475,7 +476,7 @@ export function StrategyPanel({
 
                   {/* Validation rejection reasons - only when explicitly invalid */}
                   {isExplicitlyInvalid && validationState.reasons.length > 0 && (
-                    <div className="mt-2 p-2 bg-red-900/20 border border-red-800 rounded">
+                    <div className="mt-3 rounded-xl border border-red-800 bg-red-900/20 p-3">
                       <p className="text-red-400 text-xs font-mono font-bold mb-1">REJECTION REASONS:</p>
                       <ul className="space-y-1 pl-4">
                         {validationState.reasons.map((reason, reasonIndex) => (
@@ -489,11 +490,11 @@ export function StrategyPanel({
 
                   {/* Approval result display - terminal states */}
                   {approvalStatus && (
-                    <div className="mt-3 p-2 rounded border">
+                    <div className="mt-4 rounded-xl border border-white/10 bg-slate-950/35 p-3">
                       {(() => {
                         const statusStyle = getApprovalStatusStyle(approvalStatus);
                         return (
-                          <div className={`${statusStyle.bg} ${statusStyle.border} ${statusStyle.text} px-2 py-1 font-mono text-xs`}>
+                          <div className={`${statusStyle.bg} ${statusStyle.border} ${statusStyle.text} rounded border px-2 py-1 font-mono text-xs`}>
                             APPROVAL: {statusStyle.label}
                           </div>
                         );
@@ -512,7 +513,7 @@ export function StrategyPanel({
 
                   {/* Approval button - only for explicitly valid, non-terminal strategies */}
                   {canApprove && (
-                    <div className="mt-3">
+                    <div className="mt-4">
                       <button
                         onClick={() => {
                           approveStrategyMutation.mutate({
@@ -521,7 +522,7 @@ export function StrategyPanel({
                           });
                         }}
                         disabled={approveStrategyMutation.isPending}
-                        className="w-full px-3 py-1.5 bg-blue-500/20 border border-blue-500/30 text-blue-400 font-mono text-xs rounded hover:bg-blue-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full rounded-lg border border-blue-500/30 bg-blue-500/20 px-3 py-2 text-xs font-mono text-blue-400 transition-colors hover:bg-blue-500/30 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         {isApproving ? 'APPROVING...' : 'APPROVE STRATEGY'}
                       </button>
@@ -530,25 +531,25 @@ export function StrategyPanel({
 
                   {/* Terminal/blocked states - no button, show status */}
                   {strategy.requires_operator_approval && !canApprove && !isApproving && !approvalStatus && (
-                    <div className="mt-3">
+                    <div className="mt-4">
                       {(() => {
                         if (isExplicitlyInvalid) {
                           return (
-                            <span className="px-3 py-1.5 bg-red-500/20 border border-red-500/30 text-red-400 font-mono text-xs rounded">
+                            <span className="inline-flex rounded-lg border border-red-500/30 bg-red-500/20 px-3 py-2 text-xs font-mono text-red-400">
                               CANNOT APPROVE - VALIDATION FAILED
                             </span>
                           );
                         }
                         if (validationState.kind === 'unavailable') {
                           return (
-                            <span className="px-3 py-1.5 bg-red-500/20 border border-red-500/30 text-red-400 font-mono text-xs rounded">
+                            <span className="inline-flex rounded-lg border border-red-500/30 bg-red-500/20 px-3 py-2 text-xs font-mono text-red-400">
                               CANNOT APPROVE - VALIDATION UNAVAILABLE
                             </span>
                           );
                         }
                         if (validationState.kind === 'pending' || validationState.kind === 'missing-for-strategy') {
                           return (
-                            <span className="px-3 py-1.5 bg-yellow-500/20 border border-yellow-500/30 text-yellow-400 font-mono text-xs rounded">
+                            <span className="inline-flex rounded-lg border border-yellow-500/30 bg-yellow-500/20 px-3 py-2 text-xs font-mono text-yellow-400">
                               AWAITING VALIDATION
                             </span>
                           );
@@ -560,13 +561,14 @@ export function StrategyPanel({
 
                   {/* Approval error */}
                   {approveStrategyMutation.isError && approveStrategyMutation.variables?.strategyId === strategy.strategy_id && (
-                    <div className="mt-3 p-2 bg-red-900/30 border border-red-800 rounded text-red-300 text-xs font-mono">
+                    <div className="mt-4 rounded-xl border border-red-800 bg-red-900/30 p-3 text-xs font-mono text-red-300">
                       APPROVAL FAILED: {approveStrategyMutation.error?.message || 'Unknown error'}
                     </div>
                   )}
                 </div>
-                <div className="flex flex-col items-end gap-1 text-right flex-shrink-0">
-                  <div className={`${style.text} font-mono text-sm font-bold`}>
+                <div className="rounded-xl border border-white/10 bg-slate-950/40 px-3 py-2 text-left 2xl:min-w-[11rem] 2xl:text-right">
+                  <p className="mb-1 text-[11px] uppercase tracking-[0.22em] text-gray-500">Strategy ID</p>
+                  <div className={`${style.text} break-all font-mono text-sm font-bold`}>
                     {strategy.strategy_id}
                   </div>
                 </div>

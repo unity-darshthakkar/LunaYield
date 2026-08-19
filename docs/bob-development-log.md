@@ -246,6 +246,50 @@ Final validation pass, documentation truthfulness correction, and submission pre
 
 ---
 
+## Phase 6A — Presentation Site UI Polish
+
+**Branch**: `presentation-site-ui-redesign`
+
+### Summary
+Applied a constrained frontend-only presentation polish pass to the public site and Mission Control shell. The work strengthened the space-themed atmosphere, depth, and hierarchy without changing backend behavior, route structure, safety logic, or truthfulness.
+
+### Bob Contributions
+- Reviewed the full repository structure before implementation, including backend truth constraints and frontend route/layout boundaries
+- Interpreted the UI-polish prompt against actual implementation limits
+- Added reusable presentation-shell styling primitives for cosmic backgrounds, glow layers, glass surfaces, and brand-consistent gradients
+- Refined the Home, Problem & Solution, Tech & Demo, header, footer, and Mission Control wrapper presentation
+- Preserved truthful claims around deterministic forecasting/anomaly detection/strategy generation, backend-authoritative validation, and approval ≠ execution
+
+### Implementation Notes
+- Added reusable frontend presentation components:
+  - `BrandMark`
+  - `PresentationBackdrop`
+- Expanded `frontend/src/index.css` with reusable atmosphere/surface utilities and reduced-motion-safe animations
+- Upgraded public layout shell to use shared background treatment
+- Enhanced public navigation/footer styling and replaced placeholder footer links with real internal routes
+- Strengthened page hero sections, card depth, visual separation, and tab polish across:
+  - Home
+  - Problem & Solution
+  - Tech & Demo
+- Applied only light shell framing around Mission Control; dashboard logic and controls remain untouched
+
+### Validation
+- Planned validation after implementation:
+  - `npm run lint`
+  - `npm run build`
+  - `npm run test`
+
+### Follow-up Refinements
+- Standardized the top hero/text-box width across presentation pages so Home, Problem & Solution, and Tech share the same visual frame
+- Integrated the cleaned LunaYield logo into the presentation shell for stronger brand authenticity
+- Added a fixed navigation experience across the presentation site
+- Improved Mission Control readability with roomier card spacing, broader panel layout, and more responsive wrapping for forecast/anomaly/strategy content
+
+### Commit Hash
+- Working tree state at log update: uncommitted local changes
+
+---
+
 ## Safety Architecture — Constraints Established in Phase 0
 
 | Constraint | Enforcement |
