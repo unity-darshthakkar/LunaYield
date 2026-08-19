@@ -171,6 +171,10 @@ describe('StrategyPanel', () => {
     return { result, strategies, mockValidation };
   };
 
+  function getStrategyCard(strategyId: string) {
+    return screen.getByTestId(`strategy-card-${strategyId}`);
+  }
+
   it('renders loading state when isLoading is true', () => {
     render(
       <StrategyPanel
@@ -900,13 +904,16 @@ describe('StrategyPanel', () => {
     });
 
     // Find the strat-BATTERY-CRITICAL card
-    const batteryCard = screen.getByText('strat-BATTERY-CRITICAL').closest('div[class*="border rounded p-3"]');
+    const batteryCard = getStrategyCard('strat-BATTERY-CRITICAL');
     // Verify APPROVAL: APPROVED is shown in that card
     expect(within(batteryCard!).getByText(/APPROVAL: APPROVED/)).toBeInTheDocument();
     // Verify THAT CARD has no APPROVE STRATEGY button
     expect(within(batteryCard!).queryByText('APPROVE STRATEGY')).not.toBeInTheDocument();
     // Verify other strategies still have approval buttons
-    const otherCards = Array.from(screen.getAllByText(/strat-(STORAGE|TEMPERATURE)/)).map(el => el.closest('div[class*="border rounded p-3"]'));
+    const otherCards = [
+      getStrategyCard('strat-STORAGE-WARNING'),
+      getStrategyCard('strat-TEMPERATURE-CRITICAL-f1800'),
+    ];
     otherCards.forEach(card => {
       expect(within(card!).getByText('APPROVE STRATEGY')).toBeInTheDocument();
     });
@@ -924,7 +931,7 @@ describe('StrategyPanel', () => {
     });
 
     // Find the strat-BATTERY-CRITICAL card
-    const batteryCard = screen.getByText('strat-BATTERY-CRITICAL').closest('div[class*="border rounded p-3"]');
+    const batteryCard = getStrategyCard('strat-BATTERY-CRITICAL');
     // Verify REJECTED badge is shown
     expect(within(batteryCard!).getByText(/APPROVAL: REJECTED/)).toBeInTheDocument();
     // Verify rejection reason is shown
@@ -932,7 +939,10 @@ describe('StrategyPanel', () => {
     // Verify THAT CARD has no APPROVE STRATEGY button
     expect(within(batteryCard!).queryByText('APPROVE STRATEGY')).not.toBeInTheDocument();
     // Verify other strategies still have approval buttons
-    const otherCards = Array.from(screen.getAllByText(/strat-(STORAGE|TEMPERATURE)/)).map(el => el.closest('div[class*="border rounded p-3"]'));
+    const otherCards = [
+      getStrategyCard('strat-STORAGE-WARNING'),
+      getStrategyCard('strat-TEMPERATURE-CRITICAL-f1800'),
+    ];
     otherCards.forEach(card => {
       expect(within(card!).getByText('APPROVE STRATEGY')).toBeInTheDocument();
     });
@@ -950,13 +960,16 @@ describe('StrategyPanel', () => {
     });
 
     // Find the strat-BATTERY-CRITICAL card
-    const batteryCard = screen.getByText('strat-BATTERY-CRITICAL').closest('div[class*="border rounded p-3"]');
+    const batteryCard = getStrategyCard('strat-BATTERY-CRITICAL');
     // Verify VALIDATION_FAILED badge is shown
     expect(within(batteryCard!).getByText(/APPROVAL: VALIDATION FAILED/)).toBeInTheDocument();
     // Verify THAT CARD has no APPROVE STRATEGY button
     expect(within(batteryCard!).queryByText('APPROVE STRATEGY')).not.toBeInTheDocument();
     // Verify other strategies still have approval buttons
-    const otherCards = Array.from(screen.getAllByText(/strat-(STORAGE|TEMPERATURE)/)).map(el => el.closest('div[class*="border rounded p-3"]'));
+    const otherCards = [
+      getStrategyCard('strat-STORAGE-WARNING'),
+      getStrategyCard('strat-TEMPERATURE-CRITICAL-f1800'),
+    ];
     otherCards.forEach(card => {
       expect(within(card!).getByText('APPROVE STRATEGY')).toBeInTheDocument();
     });
@@ -974,13 +987,16 @@ describe('StrategyPanel', () => {
     });
 
     // Find the strat-BATTERY-CRITICAL card
-    const batteryCard = screen.getByText('strat-BATTERY-CRITICAL').closest('div[class*="border rounded p-3"]');
+    const batteryCard = getStrategyCard('strat-BATTERY-CRITICAL');
     // Verify NOT_FOUND badge is shown
     expect(within(batteryCard!).getByText(/APPROVAL: NOT FOUND/)).toBeInTheDocument();
     // Verify THAT CARD has no APPROVE STRATEGY button
     expect(within(batteryCard!).queryByText('APPROVE STRATEGY')).not.toBeInTheDocument();
     // Verify other strategies still have approval buttons
-    const otherCards = Array.from(screen.getAllByText(/strat-(STORAGE|TEMPERATURE)/)).map(el => el.closest('div[class*="border rounded p-3"]'));
+    const otherCards = [
+      getStrategyCard('strat-STORAGE-WARNING'),
+      getStrategyCard('strat-TEMPERATURE-CRITICAL-f1800'),
+    ];
     otherCards.forEach(card => {
       expect(within(card!).getByText('APPROVE STRATEGY')).toBeInTheDocument();
     });
@@ -998,13 +1014,16 @@ describe('StrategyPanel', () => {
     });
 
     // Find the strat-BATTERY-CRITICAL card
-    const batteryCard = screen.getByText('strat-BATTERY-CRITICAL').closest('div[class*="border rounded p-3"]');
+    const batteryCard = getStrategyCard('strat-BATTERY-CRITICAL');
     // Verify ALREADY APPROVED badge is shown
     expect(within(batteryCard!).getByText(/APPROVAL: ALREADY APPROVED/)).toBeInTheDocument();
     // Verify THAT CARD has no APPROVE STRATEGY button
     expect(within(batteryCard!).queryByText('APPROVE STRATEGY')).not.toBeInTheDocument();
     // Verify other strategies still have approval buttons
-    const otherCards = Array.from(screen.getAllByText(/strat-(STORAGE|TEMPERATURE)/)).map(el => el.closest('div[class*="border rounded p-3"]'));
+    const otherCards = [
+      getStrategyCard('strat-STORAGE-WARNING'),
+      getStrategyCard('strat-TEMPERATURE-CRITICAL-f1800'),
+    ];
     otherCards.forEach(card => {
       expect(within(card!).getByText('APPROVE STRATEGY')).toBeInTheDocument();
     });

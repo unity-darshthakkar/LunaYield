@@ -1,12 +1,12 @@
 /** App component integration tests */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactNode } from 'react';
 import App from './App';
 import * as missionApi from './api/mission';
-import type { Mission, MissionForecastResponse, AnomalyDetectionResponse, StrategyGenerationResponse, AnomalyResource } from './types/mission';
+import type { Mission, MissionForecastResponse, AnomalyDetectionResponse, StrategyGenerationResponse, StrategyValidationResponse, AnomalyResource } from './types/mission';
 
 // Mock the API
 vi.mock('./api/mission', () => ({
@@ -22,6 +22,7 @@ vi.mock('./api/mission', () => ({
   getForecast: vi.fn(),
   getAnomalies: vi.fn(),
   getStrategies: vi.fn(),
+  validateStrategies: vi.fn(),
 }));
 
 const createWrapper = () => {
@@ -90,6 +91,14 @@ const mockStrategies: StrategyGenerationResponse = {
   has_critical_priority: false,
 };
 
+const mockValidation: StrategyValidationResponse = {
+  mission_id: 'luna-mission-001',
+  current_elapsed_s: 0,
+  validation_results: [],
+  validation_count: 0,
+  all_valid: true,
+};
+
 function setupMocks() {
   missionApi.getMissionState.mockResolvedValue(mockMission);
   missionApi.getScenario.mockResolvedValue({
@@ -100,30 +109,50 @@ function setupMocks() {
   missionApi.getForecast.mockResolvedValue(mockForecast);
   missionApi.getAnomalies.mockResolvedValue(mockAnomalies);
   missionApi.getStrategies.mockResolvedValue(mockStrategies);
+  missionApi.validateStrategies.mockResolvedValue(mockValidation);
 }
 
 describe('App', () => {
   beforeEach(() => {
+window.history.pushState({}, '', '/mission-control');
     vi.clearAllMocks();
   });
 
-  it('renders the LunaYield Mission Lab heading when mission loads', async () => {
+  async function showMissionPanels(options: { anomaly?: boolean; solution?: boolean } = {}) {
+    if (options.anomaly) {
+      fireEvent.click(await screen.findByRole('button', { name: /show anomaly/i }));
+      await screen.findByRole('button', { name: /hide anomaly/i });
+    }
+
+    if (options.solution) {
+      fireEvent.click(await screen.findByRole('button', { name: /show solution/i }));
+      await screen.findByRole('button', { name: /hide solution/i });
+    }
+  }
+
+  it('renders the LunaYield home branding link when mission loads', async () => {
     setupMocks();
 
     render(<App />, { wrapper: createWrapper() });
 
     await waitFor(() => {
-      expect(screen.getByText('LunaYield Mission Lab')).toBeInTheDocument();
+      expect(
+        screen.getByRole('link', { name: 'LunaYield - Home' })
+      ).toBeInTheDocument();
     });
   });
 
-  it('footer displays Phase 1 Demo', async () => {
+  it('displays the Mission Control footer', async () => {
     setupMocks();
 
     render(<App />, { wrapper: createWrapper() });
 
     await waitFor(() => {
-      expect(screen.getByText(/LunaYield Mission Lab - Phase 1 Demo/i)).toBeInTheDocument();
+      expect(
+        screen.getByText(/LunaYield Mission Lab - IBM Space Exploration Hackathon/i)
+      ).toBeInTheDocument();
+
+      expect(screen.getByText('BACKEND AUTHORITATIVE')).toBeInTheDocument();
     });
   });
 
@@ -177,11 +206,11 @@ describe('App', () => {
     setupMocks();
 
     render(<App />, { wrapper: createWrapper() });
+    await showMissionPanels({ anomaly: true });
 
     await waitFor(() => {
       expect(screen.getByText('ANOMALY DETECTION')).toBeInTheDocument();
-      // Both AnomalyPanel and StrategyPanel show NOMINAL
-      expect(screen.getAllByText('NOMINAL')).toHaveLength(2);
+      expect(screen.getByText('NOMINAL')).toBeInTheDocument();
     });
   });
 
@@ -189,6 +218,7 @@ describe('App', () => {
     setupMocks();
 
     render(<App />, { wrapper: createWrapper() });
+    await showMissionPanels({ anomaly: true });
 
     await waitFor(() => {
       expect(screen.getByText('RESOURCE FORECAST')).toBeInTheDocument();
@@ -209,11 +239,12 @@ describe('App', () => {
     setupMocks();
 
     render(<App />, { wrapper: createWrapper() });
+    await showMissionPanels({ solution: true });
 
     await waitFor(() => {
       expect(screen.getByText('STRATEGY RECOMMENDATIONS')).toBeInTheDocument();
-      // Multiple panels show NOMINAL (AnomalyPanel + StrategyPanel)
-      expect(screen.getAllByText('NOMINAL')).toHaveLength(2);
+      expect(screen.getByText('NOMINAL')).toBeInTheDocument();
+      expect(screen.getByText('No strategy recommendations at this time')).toBeInTheDocument();
     }, { timeout: 5000 });
   });
 
@@ -247,6 +278,7 @@ describe('App', () => {
     missionApi.getStrategies.mockResolvedValue(strategiesWithData);
 
     render(<App />, { wrapper: createWrapper() });
+    await showMissionPanels({ solution: true });
 
     await waitFor(() => {
       expect(screen.getByText('STRATEGY RECOMMENDATIONS')).toBeInTheDocument();
@@ -261,6 +293,7 @@ describe('App', () => {
     setupMocks();
 
     render(<App />, { wrapper: createWrapper() });
+    await showMissionPanels({ anomaly: true, solution: true });
 
     await waitFor(() => {
       expect(screen.getByText('RESOURCE FORECAST')).toBeInTheDocument();

@@ -1,12 +1,11 @@
 /** AnomalyPanel tests */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AnomalyPanel } from './AnomalyPanel';
 import type { AnomalyDetectionResponse, AnomalyFinding } from '../types/mission';
 
-// Mock anomaly data
 const createMockAnomalies = (overrides: Partial<AnomalyDetectionResponse> = {}): AnomalyDetectionResponse => {
   const mockFindings: AnomalyFinding[] = [
     {
@@ -67,6 +66,10 @@ describe('AnomalyPanel', () => {
     wrapper = createWrapper();
     vi.useFakeTimers();
   });
+
+  function getAnomalyCard(reason: string) {
+    return screen.getByText(reason).closest('.rounded-xl.border.p-4') as HTMLElement;
+  }
 
   it('renders loading state when isLoading is true', () => {
     render(
@@ -145,7 +148,6 @@ describe('AnomalyPanel', () => {
       { wrapper }
     );
 
-    // Check all three findings are displayed
     expect(screen.getByText('Battery level approaching critical threshold')).toBeInTheDocument();
     expect(screen.getByText('Storage utilization exceeding nominal capacity')).toBeInTheDocument();
     expect(screen.getByText('Temperature exceeds safe operating limit')).toBeInTheDocument();
@@ -209,17 +211,23 @@ describe('AnomalyPanel', () => {
       { wrapper }
     );
 
-    // Battery: observed 28.5%, threshold 30%
-    expect(screen.getByText('28.5%')).toBeInTheDocument();
-    expect(screen.getByText('threshold: 30%')).toBeInTheDocument();
+    const batteryCard = getAnomalyCard('Battery level approaching critical threshold');
+    expect(within(batteryCard).getByText('Observed')).toBeInTheDocument();
+    expect(within(batteryCard).getByText('28.5%')).toBeInTheDocument();
+    expect(within(batteryCard).getByText('Threshold')).toBeInTheDocument();
+    expect(within(batteryCard).getByText('30%')).toBeInTheDocument();
 
-    // Storage: observed 82%, threshold 80%
-    expect(screen.getByText('82%')).toBeInTheDocument();
-    expect(screen.getByText('threshold: 80%')).toBeInTheDocument();
+    const storageCard = getAnomalyCard('Storage utilization exceeding nominal capacity');
+    expect(within(storageCard).getByText('Observed')).toBeInTheDocument();
+    expect(within(storageCard).getByText('82%')).toBeInTheDocument();
+    expect(within(storageCard).getByText('Threshold')).toBeInTheDocument();
+    expect(within(storageCard).getByText('80%')).toBeInTheDocument();
 
-    // Temperature: observed 65°C, threshold 60°C
-    expect(screen.getByText('65°C')).toBeInTheDocument();
-    expect(screen.getByText('threshold: 60°C')).toBeInTheDocument();
+    const temperatureCard = getAnomalyCard('Temperature exceeds safe operating limit');
+    expect(within(temperatureCard).getByText('Observed')).toBeInTheDocument();
+    expect(within(temperatureCard).getByText((_, element) => element?.textContent === '65°C')).toBeInTheDocument();
+    expect(within(temperatureCard).getByText('Threshold')).toBeInTheDocument();
+    expect(within(temperatureCard).getByText((_, element) => element?.textContent === '60°C')).toBeInTheDocument();
   });
 
   it('shows overall status badges (CRITICAL + count, WARNING only when no CRITICAL)', () => {
@@ -233,10 +241,9 @@ describe('AnomalyPanel', () => {
       { wrapper }
     );
 
-    // When CRITICAL is present, only CRITICAL badge shows (not WARNING)
     expect(screen.getByText('CRITICAL')).toBeInTheDocument();
     expect(screen.queryByText('WARNING')).not.toBeInTheDocument();
-    expect(screen.getByText('3')).toBeInTheDocument(); // anomaly count
+    expect(screen.getByText('3')).toBeInTheDocument();
   });
 
   it('formats temperature in Celsius', () => {
@@ -266,8 +273,10 @@ describe('AnomalyPanel', () => {
       { wrapper }
     );
 
-    expect(screen.getByText('45°C')).toBeInTheDocument();
-    expect(screen.getByText('threshold: 40°C')).toBeInTheDocument();
+    const temperatureCard = getAnomalyCard('Temperature rising');
+    expect(within(temperatureCard).getByText((_, element) => element?.textContent === '45°C')).toBeInTheDocument();
+    expect(within(temperatureCard).getByText('Threshold')).toBeInTheDocument();
+    expect(within(temperatureCard).getByText((_, element) => element?.textContent === '40°C')).toBeInTheDocument();
   });
 
   it('formats comm window and op time in seconds', () => {
@@ -306,9 +315,15 @@ describe('AnomalyPanel', () => {
       { wrapper }
     );
 
-    expect(screen.getByText('500s')).toBeInTheDocument();
-    expect(screen.getAllByText('threshold: 600s')).toHaveLength(2);
-    expect(screen.getByText('300s')).toBeInTheDocument();
+    const commCard = getAnomalyCard('Comm window ending');
+    expect(within(commCard).getByText('500s')).toBeInTheDocument();
+    expect(within(commCard).getByText('Threshold')).toBeInTheDocument();
+    expect(within(commCard).getByText('600s')).toBeInTheDocument();
+
+    const opTimeCard = getAnomalyCard('Operational time low');
+    expect(within(opTimeCard).getByText('300s')).toBeInTheDocument();
+    expect(within(opTimeCard).getByText('Threshold')).toBeInTheDocument();
+    expect(within(opTimeCard).getByText('600s')).toBeInTheDocument();
   });
 
   it('shows provenance - current vs forecast clearly', () => {
@@ -347,12 +362,11 @@ describe('AnomalyPanel', () => {
       { wrapper }
     );
 
-    // Current anomaly should NOT have FORECAST badge
-    const currentAnomaly = screen.getByText('Current battery low').closest('div[class*="bg-"]');
+    const currentAnomaly = getAnomalyCard('Current battery low');
     expect(currentAnomaly).not.toHaveTextContent('FORECAST');
 
-    // Forecast anomaly SHOULD have FORECAST badge
-    expect(screen.getByText('Forecast battery critical').closest('div[class*="bg-"]')).toHaveTextContent('FORECAST');
+    const forecastAnomaly = getAnomalyCard('Forecast battery critical');
+    expect(forecastAnomaly).toHaveTextContent('FORECAST');
     expect(screen.getByText('1h ahead')).toBeInTheDocument();
   });
 

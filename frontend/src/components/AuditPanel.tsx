@@ -23,7 +23,12 @@ const eventTypeColors: Record<string, string> = {
 function formatTimestamp(timestamp: string): string {
   try {
     const date = new Date(timestamp);
-    return date.toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    return date.toLocaleTimeString([], {
+      hour12: false,
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    });
   } catch {
     return timestamp;
   }
@@ -34,47 +39,43 @@ export function AuditPanel({ events, className = '' }: AuditPanelProps) {
 
   if (!auditEvents.length) {
     return (
-      <div className={clsx('p-4 bg-gray-900/50 rounded-lg border border-gray-700', className)}>
-        <h3 className="text-sm font-semibold text-gray-300 mb-3 flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-gray-600" />
+      <div className={clsx('rounded-2xl border border-gray-700 bg-gray-900/50 p-5', className)}>
+        <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-gray-300">
+          <span className="h-2 w-2 rounded-full bg-gray-600" />
           AUDIT TRAIL
         </h3>
-        <p className="text-gray-500 text-sm text-center py-4">No audit events yet</p>
+        <p className="py-5 text-center text-sm text-gray-500">No audit events yet</p>
       </div>
     );
   }
 
-  // Show newest first
   const sortedEvents = [...auditEvents].sort(
     (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
   );
 
   return (
-    <div className={clsx('p-4 bg-gray-900/50 rounded-lg border border-gray-700', className)}>
-      <h3 className="text-sm font-semibold text-gray-300 mb-3 flex items-center gap-2">
-        <span className="w-2 h-2 rounded-full bg-gray-400" />
+    <div className={clsx('rounded-2xl border border-gray-700 bg-gray-900/50 p-5', className)}>
+      <h3 className="mb-4 flex flex-wrap items-center gap-2 text-sm font-semibold text-gray-300">
+        <span className="h-2 w-2 rounded-full bg-gray-400" />
         AUDIT TRAIL
-        <span className="text-xs text-gray-500 font-mono">({auditEvents.length} events)</span>
+        <span className="text-xs font-mono text-gray-500">({auditEvents.length} events)</span>
       </h3>
-      <div className="max-h-64 overflow-y-auto space-y-2">
+      <div className="max-h-80 space-y-3 overflow-y-auto pr-1">
         {sortedEvents.map((event, index) => {
           const color = eventTypeColors[event.event_type] || 'text-gray-400';
+
           return (
             <div
               key={`${event.event_id}-${index}`}
-              className="flex items-start gap-3 text-xs font-mono"
+              className="rounded-xl border border-gray-800 bg-gray-950/35 p-3 text-xs font-mono"
             >
-              <div className="flex-shrink-0 w-20 text-gray-500">
-                {formatTimestamp(event.timestamp)}
+              <div className="mb-2 flex flex-wrap items-center gap-2">
+                <div className="text-gray-500">{formatTimestamp(event.timestamp)}</div>
+                <div className={color}>{event.event_type}</div>
               </div>
-              <div className={`flex-shrink-0 w-28 ${color}`}>
-                {event.event_type}
-              </div>
-              <div className="flex-1 min-w-0 text-white truncate">
-                {event.description}
-              </div>
+              <div className="min-w-0 break-words leading-relaxed text-white">{event.description}</div>
               {event.metadata && Object.keys(event.metadata).length > 0 && (
-                <div className="flex-shrink-0 text-[10px] text-gray-500 max-w-[150px] truncate">
+                <div className="mt-2 break-words text-[10px] leading-relaxed text-gray-500">
                   {JSON.stringify(event.metadata)}
                 </div>
               )}

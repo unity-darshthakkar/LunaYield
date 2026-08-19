@@ -217,8 +217,19 @@ function setupDefaultMocks(
 
 describe('Phase 5D Integration Regression Tests', () => {
   beforeEach(() => {
+window.history.pushState({}, '', '/mission-control');
     vi.clearAllMocks();
   });
+
+  async function showMissionPanels(options: { anomaly?: boolean; solution?: boolean } = {}) {
+    if (options.anomaly) {
+      fireEvent.click(await screen.findByRole('button', { name: /show anomaly/i }));
+    }
+
+    if (options.solution) {
+      fireEvent.click(await screen.findByRole('button', { name: /show solution/i }));
+    }
+  }
 
   describe('A. Shared forecast horizon propagates consistently', () => {
     it('uses the same horizon for forecast, anomalies, strategies, and validation requests after selector change', async () => {
@@ -265,6 +276,7 @@ describe('Phase 5D Integration Regression Tests', () => {
       missionApi.validateStrategies.mockResolvedValue(createMockValidation(true));
 
       render(<App />, { wrapper: createWrapper() });
+      await showMissionPanels({ anomaly: true, solution: true });
 
       await waitFor(() => {
         expect(screen.getByText('FORECAST ERROR')).toBeInTheDocument();
@@ -294,6 +306,7 @@ describe('Phase 5D Integration Regression Tests', () => {
       missionApi.validateStrategies.mockResolvedValue(createMockValidation(true));
 
       render(<App />, { wrapper: createWrapper() });
+      await showMissionPanels({ anomaly: true, solution: true });
 
       await waitFor(() => {
         expect(screen.getByText('STRATEGY ERROR')).toBeInTheDocument();
@@ -313,6 +326,7 @@ describe('Phase 5D Integration Regression Tests', () => {
       missionApi.validateStrategies.mockRejectedValue(new Error('Validation service down'));
 
       render(<App />, { wrapper: createWrapper() });
+      await showMissionPanels({ solution: true });
 
       // Strategy recommendations should still render
       await waitFor(() => {
@@ -337,6 +351,7 @@ describe('Phase 5D Integration Regression Tests', () => {
       setupDefaultMocks(3600, 0, 0, true);
 
       render(<App />, { wrapper: createWrapper() });
+      await showMissionPanels({ anomaly: true });
 
       await waitFor(() => {
         expect(screen.getByText('ANOMALY DETECTION')).toBeInTheDocument();
@@ -359,6 +374,7 @@ describe('Phase 5D Integration Regression Tests', () => {
       setupDefaultMocks(3600, 1, 0, true);
 
       render(<App />, { wrapper: createWrapper() });
+      await showMissionPanels({ solution: true });
 
       await waitFor(() => {
         expect(screen.getByText('STRATEGY RECOMMENDATIONS')).toBeInTheDocument();
@@ -375,6 +391,7 @@ describe('Phase 5D Integration Regression Tests', () => {
       setupDefaultMocks(3600, 2, 2, true);
 
       render(<App />, { wrapper: createWrapper() });
+      await showMissionPanels({ solution: true });
 
       await waitFor(() => {
         expect(screen.getByText('STRATEGY RECOMMENDATIONS')).toBeInTheDocument();
@@ -401,6 +418,7 @@ describe('Phase 5D Integration Regression Tests', () => {
       });
 
       render(<App />, { wrapper: createWrapper() });
+      await showMissionPanels({ solution: true });
 
       await waitFor(() => {
         expect(screen.getByText('STRATEGY RECOMMENDATIONS')).toBeInTheDocument();
