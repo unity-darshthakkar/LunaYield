@@ -118,6 +118,25 @@ describe('MissionControls', () => {
     expect(screen.getByText(/Review and approve/i)).toBeInTheDocument();
   });
 
+  it('AWAITING_APPROVAL disables all controls except reset', () => {
+    render(
+      <MissionControls
+        {...defaultProps}
+        missionStatus="AWAITING_APPROVAL"
+        anomalyActive={true}
+        candidatePlansCount={3}
+        approvedPlanLabel="Extended Survey"
+      />
+    );
+
+    expect(screen.getByRole('button', { name: /START MISSION/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /PAUSE/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /RESUME/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /INJECT ANOMALY/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /PLAN SELECTED: EXTENDED SURVEY/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /RESET MISSION/i })).not.toBeDisabled();
+  });
+
   it('AWAITING_APPROVAL does not show Generate recovery plans banner', () => {
     render(
       <MissionControls

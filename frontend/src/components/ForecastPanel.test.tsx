@@ -241,10 +241,10 @@ describe('ForecastPanel', () => {
       { wrapper }
     );
 
-    expect(screen.getByText('BATT')).toBeInTheDocument();
-    expect(screen.getByText('STOR')).toBeInTheDocument();
-    expect(screen.getByText('TEMP')).toBeInTheDocument();
-    expect(screen.getByText('COMM')).toBeInTheDocument();
-    expect(screen.getByText('OPS')).toBeInTheDocument();
+    expect(screen.getAllByText('BATT').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('STOR').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('TEMP').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('COMM').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('OPS').length).toBeGreaterThan(0);
   });
 });

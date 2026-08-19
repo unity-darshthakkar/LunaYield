@@ -160,6 +160,6 @@ describe('PlanComparison', () => {
 
   it('renders nothing when plans array is empty', () => {
     const { container } = render(<PlanComparison {...defaultProps} plans={[]} />);
-    expect(container).toBeEmpty();
+    expect(container).toBeEmptyDOMElement();
   });
 });

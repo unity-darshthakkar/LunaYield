@@ -1,3 +1,703 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+    --page-bg: #030712;
+    --page-bg-deep: #020617;
+    --panel-bg: rgba(10, 15, 31, 0.72);
+    --panel-border: rgba(148, 163, 184, 0.14);
+    --panel-shadow: 0 30px 80px rgba(2, 6, 23, 0.45);
+    --glow-cyan: rgba(34, 211, 238, 0.2);
+    --glow-violet: rgba(139, 92, 246, 0.2);
+  }
+
+  html {
+    background:
+      radial-gradient(circle at top, rgba(34, 211, 238, 0.08), transparent 28%),
+      linear-gradient(180deg, #040816 0%, #020617 35%, #030712 100%);
+    scroll-behavior: smooth;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: transparent;
+    color: #e5eefb;
+    font-family: "Aptos", "Segoe UI Variable", "Trebuchet MS", sans-serif;
+  }
+
+  #root {
+    min-height: 100vh;
+  }
+}
+
+@layer components {
+  .presentation-shell {
+    @apply relative min-h-screen overflow-hidden bg-slate-950 text-white;
+    background:
+      radial-gradient(circle at top, rgba(34, 211, 238, 0.08), transparent 26%),
+      radial-gradient(circle at 85% 18%, rgba(139, 92, 246, 0.12), transparent 20%),
+      linear-gradient(180deg, #050914 0%, #030712 100%);
+  }
+
+  .presentation-main {
+    @apply relative z-10 flex-1 pt-16 md:pt-20;
+  }
+
+  .mission-main {
+    @apply relative z-10 flex-1 pt-16;
+  }
+
+  .page-section {
+    @apply relative;
+  }
+
+  .page-shell {
+    @apply mx-auto w-full max-w-7xl px-4 md:px-6 lg:px-8;
+  }
+
+  .section-stack {
+    @apply py-16 md:py-24 lg:py-28;
+  }
+
+  .page-section::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(180deg, rgba(148, 163, 184, 0.04), transparent 18%),
+      linear-gradient(90deg, transparent, rgba(15, 23, 42, 0.22) 22%, rgba(15, 23, 42, 0.22) 78%, transparent);
+    pointer-events: none;
+  }
+
+  .hero-panel {
+    @apply relative overflow-hidden rounded-[1.5rem] border border-white/10 bg-slate-950/45 md:rounded-[2rem];
+    box-shadow: var(--panel-shadow);
+    backdrop-filter: blur(14px);
+  }
+
+  .hero-panel::before {
+    content: '';
+    position: absolute;
+    inset: 1px;
+    border-radius: inherit;
+    background:
+      linear-gradient(145deg, rgba(255, 255, 255, 0.1), transparent 40%),
+      radial-gradient(circle at 20% 20%, rgba(139, 92, 246, 0.18), transparent 35%),
+      radial-gradient(circle at 80% 40%, rgba(34, 211, 238, 0.12), transparent 32%);
+    pointer-events: none;
+  }
+
+  .glass-panel {
+    @apply relative overflow-hidden border border-white/10 bg-slate-950/55;
+    box-shadow: var(--panel-shadow);
+    backdrop-filter: blur(14px);
+  }
+
+  .glass-panel::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent 28%);
+    pointer-events: none;
+  }
+
+  .glass-panel-strong {
+    @apply glass-panel border-cyan-400/15 bg-slate-950/70;
+  }
+
+  .surface-hover {
+    @apply transition duration-300 ease-out;
+    transform: translateZ(0);
+  }
+
+  .surface-hover:hover {
+    transform: translateY(-4px) scale(1.01);
+    box-shadow:
+      0 18px 50px rgba(2, 6, 23, 0.38),
+      0 0 0 1px rgba(34, 211, 238, 0.08);
+  }
+
+  .section-kicker {
+    @apply inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-sm font-medium;
+    backdrop-filter: blur(12px);
+  }
+
+  .presentation-hero-frame {
+    @apply hero-panel mx-auto max-w-7xl px-5 py-8 sm:px-6 md:px-10 md:py-10;
+  }
+
+  .presentation-hero-title {
+    @apply mx-auto mb-4 max-w-6xl font-bold tracking-tight text-white;
+    font-size: 1.9375rem;
+    line-height: 1.08;
+  }
+
+  .presentation-hero-copy {
+    @apply mx-auto max-w-4xl leading-relaxed text-slate-300;
+    font-size: 1.0625rem;
+  }
+
+  .presentation-hero-body {
+    @apply mx-auto max-w-6xl text-center;
+  }
+
+  .page-intro {
+    @apply mx-auto max-w-4xl text-center;
+  }
+
+  .orbital-chip {
+    @apply inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs uppercase tracking-[0.24em] text-slate-300;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  }
+
+  .tab-strip {
+    @apply flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] md:gap-4;
+  }
+
+  .tab-strip::-webkit-scrollbar {
+    display: none;
+  }
+
+  .presentation-backdrop {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+  }
+
+  .presentation-backdrop__stars,
+  .presentation-backdrop__deep-space,
+  .presentation-backdrop__planet-field,
+  .presentation-backdrop__constellation,
+  .presentation-backdrop__orbit-cluster,
+  .presentation-backdrop__solar-system,
+  .presentation-backdrop__glow,
+  .presentation-backdrop__grid,
+  .presentation-backdrop__horizon {
+    position: absolute;
+    inset: 0;
+  }
+
+  .presentation-backdrop__stars--near {
+    background-image:
+      radial-gradient(1.2px 1.2px at 12% 22%, rgba(255, 255, 255, 0.85), transparent),
+      radial-gradient(1px 1px at 36% 58%, rgba(255, 255, 255, 0.72), transparent),
+      radial-gradient(1.4px 1.4px at 62% 18%, rgba(196, 247, 255, 0.9), transparent),
+      radial-gradient(1px 1px at 84% 36%, rgba(255, 255, 255, 0.65), transparent),
+      radial-gradient(1.3px 1.3px at 9% 78%, rgba(255, 255, 255, 0.8), transparent),
+      radial-gradient(1.2px 1.2px at 92% 72%, rgba(196, 247, 255, 0.72), transparent);
+    background-size: 420px 420px;
+    opacity: 0.55;
+    animation: drift-stars 150s linear infinite;
+  }
+
+  .presentation-backdrop__stars--far {
+    background-image:
+      radial-gradient(1px 1px at 20% 40%, rgba(255, 255, 255, 0.55), transparent),
+      radial-gradient(1px 1px at 70% 22%, rgba(255, 255, 255, 0.5), transparent),
+      radial-gradient(1px 1px at 45% 80%, rgba(34, 211, 238, 0.45), transparent),
+      radial-gradient(1px 1px at 88% 66%, rgba(139, 92, 246, 0.35), transparent);
+    background-size: 560px 560px;
+    opacity: 0.35;
+    animation: drift-stars 220s linear infinite reverse;
+  }
+
+  .presentation-backdrop__deep-space {
+    background:
+      radial-gradient(circle at 16% 18%, rgba(34, 211, 238, 0.08), transparent 12%),
+      radial-gradient(circle at 78% 34%, rgba(139, 92, 246, 0.09), transparent 14%),
+      radial-gradient(circle at 24% 72%, rgba(99, 102, 241, 0.08), transparent 16%),
+      radial-gradient(circle at 86% 82%, rgba(34, 211, 238, 0.07), transparent 12%);
+    opacity: 0.95;
+  }
+
+  .presentation-backdrop__planet-field {
+    background-image:
+      radial-gradient(circle at 8% 14%, rgba(251, 191, 36, 0.46) 0 0.55rem, rgba(251, 191, 36, 0.04) 1rem, transparent 1.3rem),
+      radial-gradient(circle at 14% 46%, rgba(125, 211, 252, 0.5) 0 0.48rem, rgba(125, 211, 252, 0.04) 0.95rem, transparent 1.25rem),
+      radial-gradient(circle at 91% 21%, rgba(255, 255, 255, 0.42) 0 3.8rem, rgba(255, 255, 255, 0.04) 7rem, transparent 9rem),
+      radial-gradient(circle at 80% 58%, rgba(165, 180, 252, 0.42) 0 0.42rem, rgba(165, 180, 252, 0.04) 0.9rem, transparent 1.15rem),
+      radial-gradient(circle at 11% 83%, rgba(34, 211, 238, 0.46) 0 0.55rem, rgba(34, 211, 238, 0.04) 1rem, transparent 1.3rem),
+      radial-gradient(circle at 70% 88%, rgba(139, 92, 246, 0.42) 0 0.65rem, rgba(139, 92, 246, 0.04) 1.2rem, transparent 1.45rem),
+      radial-gradient(circle at 38% 63%, rgba(255, 255, 255, 0.28) 0 0.35rem, rgba(255, 255, 255, 0.03) 0.7rem, transparent 1rem);
+    opacity: 0.75;
+  }
+
+  .presentation-backdrop__constellation {
+    inset: auto;
+    opacity: 0.4;
+  }
+
+  .presentation-backdrop__constellation--alpha {
+    top: 8rem;
+    right: 16rem;
+    width: 18rem;
+    height: 7rem;
+    background:
+      radial-gradient(circle at 10% 45%, rgba(139, 92, 246, 0.95) 0 2px, transparent 3px),
+      radial-gradient(circle at 34% 22%, rgba(255, 255, 255, 0.9) 0 2px, transparent 3px),
+      radial-gradient(circle at 56% 58%, rgba(34, 211, 238, 0.95) 0 2px, transparent 3px),
+      radial-gradient(circle at 82% 38%, rgba(139, 92, 246, 0.8) 0 2px, transparent 3px),
+      linear-gradient(102deg, transparent 13%, rgba(139, 92, 246, 0.28) 14%, rgba(139, 92, 246, 0.28) 15%, transparent 16%),
+      linear-gradient(8deg, transparent 40%, rgba(34, 211, 238, 0.24) 41%, rgba(34, 211, 238, 0.24) 42%, transparent 43%),
+      linear-gradient(165deg, transparent 69%, rgba(139, 92, 246, 0.2) 70%, rgba(139, 92, 246, 0.2) 71%, transparent 72%);
+  }
+
+  .presentation-backdrop__constellation--beta {
+    bottom: 21rem;
+    left: 7rem;
+    width: 14rem;
+    height: 6rem;
+    background:
+      radial-gradient(circle at 14% 68%, rgba(255, 255, 255, 0.82) 0 1.8px, transparent 3px),
+      radial-gradient(circle at 42% 28%, rgba(34, 211, 238, 0.85) 0 1.8px, transparent 3px),
+      radial-gradient(circle at 72% 56%, rgba(255, 255, 255, 0.72) 0 1.8px, transparent 3px),
+      radial-gradient(circle at 90% 18%, rgba(139, 92, 246, 0.8) 0 1.8px, transparent 3px),
+      linear-gradient(132deg, transparent 21%, rgba(34, 211, 238, 0.16) 22%, rgba(34, 211, 238, 0.16) 23%, transparent 24%),
+      linear-gradient(20deg, transparent 52%, rgba(255, 255, 255, 0.12) 53%, rgba(255, 255, 255, 0.12) 54%, transparent 55%);
+  }
+
+  .presentation-backdrop__constellation--gamma {
+    top: 45%;
+    right: 11%;
+    width: 16rem;
+    height: 6rem;
+    background:
+      radial-gradient(circle at 12% 38%, rgba(255, 255, 255, 0.86) 0 1.7px, transparent 3px),
+      radial-gradient(circle at 36% 66%, rgba(34, 211, 238, 0.82) 0 1.7px, transparent 3px),
+      radial-gradient(circle at 63% 28%, rgba(139, 92, 246, 0.82) 0 1.7px, transparent 3px),
+      radial-gradient(circle at 86% 52%, rgba(255, 255, 255, 0.7) 0 1.7px, transparent 3px),
+      linear-gradient(12deg, transparent 23%, rgba(255, 255, 255, 0.14) 24%, rgba(255, 255, 255, 0.14) 25%, transparent 26%),
+      linear-gradient(162deg, transparent 54%, rgba(34, 211, 238, 0.16) 55%, rgba(34, 211, 238, 0.16) 56%, transparent 57%);
+  }
+
+  .presentation-backdrop__constellation--delta {
+    bottom: 10%;
+    left: 18%;
+    width: 15rem;
+    height: 6rem;
+    background:
+      radial-gradient(circle at 10% 56%, rgba(255, 255, 255, 0.72) 0 1.7px, transparent 3px),
+      radial-gradient(circle at 42% 20%, rgba(139, 92, 246, 0.8) 0 1.7px, transparent 3px),
+      radial-gradient(circle at 69% 70%, rgba(34, 211, 238, 0.82) 0 1.7px, transparent 3px),
+      radial-gradient(circle at 92% 34%, rgba(255, 255, 255, 0.7) 0 1.7px, transparent 3px),
+      linear-gradient(148deg, transparent 29%, rgba(139, 92, 246, 0.15) 30%, rgba(139, 92, 246, 0.15) 31%, transparent 32%),
+      linear-gradient(24deg, transparent 61%, rgba(34, 211, 238, 0.14) 62%, rgba(34, 211, 238, 0.14) 63%, transparent 64%);
+  }
+
+  .presentation-backdrop__orbit-cluster {
+    top: 9rem;
+    left: -3rem;
+    width: 26rem;
+    height: 26rem;
+    opacity: 0.5;
+  }
+
+  .presentation-backdrop__orbit-cluster--lower {
+    top: auto;
+    bottom: 12rem;
+    left: auto;
+    right: -4rem;
+    width: 24rem;
+    height: 24rem;
+    opacity: 0.3;
+    transform: rotate(24deg);
+  }
+
+  .presentation-backdrop__orbit,
+  .presentation-backdrop__planet,
+  .presentation-backdrop__solar-ring,
+  .presentation-backdrop__solar-planet,
+  .presentation-backdrop__solar-star {
+    position: absolute;
+  }
+
+  .presentation-backdrop__orbit {
+    inset: 50%;
+    border-radius: 9999px;
+    border: 1px solid rgba(148, 163, 184, 0.16);
+    transform: translate(-50%, -50%) rotate(-18deg);
+  }
+
+  .presentation-backdrop__orbit--outer {
+    width: 24rem;
+    height: 13rem;
+    border-color: rgba(34, 211, 238, 0.16);
+  }
+
+  .presentation-backdrop__orbit--mid {
+    width: 18rem;
+    height: 9.5rem;
+    border-color: rgba(139, 92, 246, 0.18);
+  }
+
+  .presentation-backdrop__orbit--inner {
+    width: 11rem;
+    height: 5.5rem;
+    border-color: rgba(255, 255, 255, 0.14);
+  }
+
+  .presentation-backdrop__planet {
+    border-radius: 9999px;
+    box-shadow: 0 0 24px rgba(255, 255, 255, 0.08);
+  }
+
+  .presentation-backdrop__planet--violet {
+    top: 4.2rem;
+    left: 15.25rem;
+    width: 1.1rem;
+    height: 1.1rem;
+    background: radial-gradient(circle at 35% 35%, #ede9fe 0%, #8b5cf6 45%, #312e81 100%);
+  }
+
+  .presentation-backdrop__planet--cyan {
+    bottom: 5rem;
+    left: 5.25rem;
+    width: 0.95rem;
+    height: 0.95rem;
+    background: radial-gradient(circle at 35% 35%, #ecfeff 0%, #22d3ee 45%, #164e63 100%);
+  }
+
+  .presentation-backdrop__planet--ice {
+    top: 10.9rem;
+    left: 8.3rem;
+    width: 0.75rem;
+    height: 0.75rem;
+    background: radial-gradient(circle at 35% 35%, #fff 0%, #cbd5e1 40%, #64748b 100%);
+  }
+
+  .presentation-backdrop__planet--ember {
+    bottom: 8.1rem;
+    right: 3.7rem;
+    width: 0.8rem;
+    height: 0.8rem;
+    background: radial-gradient(circle at 35% 35%, #fde68a 0%, #fb7185 46%, #7f1d1d 100%);
+  }
+
+  .presentation-backdrop__solar-system {
+    right: 5rem;
+    bottom: 9rem;
+    width: 19rem;
+    height: 19rem;
+    opacity: 0.38;
+  }
+
+  .presentation-backdrop__solar-system--mid {
+    right: auto;
+    left: 6rem;
+    top: 34rem;
+    bottom: auto;
+    width: 14rem;
+    height: 14rem;
+    opacity: 0.24;
+  }
+
+  .presentation-backdrop__solar-star {
+    top: 50%;
+    left: 50%;
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: 9999px;
+    background: radial-gradient(circle, #fff7ed 0%, #fcd34d 38%, rgba(251, 146, 60, 0.9) 68%, rgba(251, 146, 60, 0) 100%);
+    box-shadow: 0 0 40px rgba(251, 191, 36, 0.35);
+    transform: translate(-50%, -50%);
+  }
+
+  .presentation-backdrop__solar-ring {
+    top: 50%;
+    left: 50%;
+    border-radius: 9999px;
+    border: 1px solid rgba(255, 255, 255, 0.11);
+    transform: translate(-50%, -50%);
+  }
+
+  .presentation-backdrop__solar-ring--one {
+    width: 6rem;
+    height: 6rem;
+  }
+
+  .presentation-backdrop__solar-ring--two {
+    width: 10rem;
+    height: 10rem;
+    border-color: rgba(34, 211, 238, 0.12);
+  }
+
+  .presentation-backdrop__solar-ring--three {
+    width: 15rem;
+    height: 15rem;
+    border-color: rgba(139, 92, 246, 0.12);
+  }
+
+  .presentation-backdrop__solar-planet {
+    border-radius: 9999px;
+  }
+
+  .presentation-backdrop__solar-planet--one {
+    top: 50%;
+    left: calc(50% + 3rem);
+    width: 0.65rem;
+    height: 0.65rem;
+    background: #93c5fd;
+    transform: translate(-50%, -50%);
+  }
+
+  .presentation-backdrop__solar-planet--two {
+    top: calc(50% - 5rem);
+    left: 50%;
+    width: 0.8rem;
+    height: 0.8rem;
+    background: #c4b5fd;
+    transform: translate(-50%, -50%);
+  }
+
+  .presentation-backdrop__solar-planet--three {
+    top: calc(50% + 5.3rem);
+    left: calc(50% - 5.3rem);
+    width: 0.95rem;
+    height: 0.95rem;
+    background: #67e8f9;
+    transform: translate(-50%, -50%);
+  }
+
+  .presentation-backdrop__grid {
+    inset: auto 0 0;
+    height: 42vh;
+    background:
+      linear-gradient(180deg, transparent, rgba(15, 23, 42, 0.42)),
+      repeating-linear-gradient(
+        90deg,
+        transparent,
+        transparent 7.5rem,
+        rgba(99, 102, 241, 0.06) 7.5rem,
+        rgba(99, 102, 241, 0.06) calc(7.5rem + 1px)
+      );
+    mask-image: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.88) 35%);
+    opacity: 0.55;
+  }
+
+  .presentation-backdrop__glow--violet {
+    background: radial-gradient(circle at 30% 12%, rgba(139, 92, 246, 0.2), transparent 24%);
+  }
+
+  .presentation-backdrop__glow--cyan {
+    background: radial-gradient(circle at 72% 22%, rgba(34, 211, 238, 0.16), transparent 18%);
+  }
+
+  .presentation-backdrop__glow--moon {
+    inset: 6rem 5rem auto auto;
+    width: 13rem;
+    height: 13rem;
+    border-radius: 9999px;
+    background:
+      radial-gradient(circle at 40% 40%, rgba(248, 250, 252, 0.88), rgba(148, 163, 184, 0.1) 58%, transparent 70%);
+    filter: blur(0.4px);
+    opacity: 0.35;
+  }
+
+  .presentation-backdrop__horizon {
+    inset: auto 0 -8vh;
+    height: 28vh;
+    background:
+      radial-gradient(circle at 50% 0, rgba(34, 211, 238, 0.12), transparent 30%),
+      linear-gradient(180deg, transparent 0%, rgba(15, 23, 42, 0.82) 78%, rgba(2, 6, 23, 0.96) 100%);
+  }
+
+  .presentation-backdrop--mission .presentation-backdrop__grid {
+    opacity: 0.36;
+  }
+
+  .presentation-backdrop--mission .presentation-backdrop__glow--moon {
+    width: 9rem;
+    height: 9rem;
+    right: 2rem;
+    top: 5rem;
+    opacity: 0.18;
+  }
+
+  .presentation-backdrop--mission .presentation-backdrop__constellation,
+  .presentation-backdrop--mission .presentation-backdrop__orbit-cluster,
+  .presentation-backdrop--mission .presentation-backdrop__solar-system,
+  .presentation-backdrop--mission .presentation-backdrop__deep-space,
+  .presentation-backdrop--mission .presentation-backdrop__planet-field {
+    display: none;
+  }
+}
+
+@layer utilities {
+  .text-gradient-brand {
+    background: linear-gradient(90deg, #f8fafc 0%, #dbeafe 30%, #8b5cf6 62%, #22d3ee 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .text-gradient-violet {
+    background: linear-gradient(90deg, #a78bfa 0%, #8b5cf6 55%, #22d3ee 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .animate-fade-in-up {
+    animation: fade-in-up 700ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .animate-bounce-slow {
+    animation: bounce-slow 2.6s ease-in-out infinite;
+  }
+}
+
+@keyframes drift-stars {
+  from {
+    transform: translateY(0);
+  }
+
+  to {
+    transform: translateY(-420px);
+  }
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 18px, 0);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes bounce-slow {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(8px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media (min-width: 640px) {
+  .presentation-hero-title {
+    font-size: 2.3125rem;
+  }
+
+  .presentation-hero-copy {
+    font-size: 1.1875rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .presentation-hero-title {
+    font-size: 3.0625rem;
+  }
+}
+
+@media (max-width: 767px) {
+  .presentation-backdrop__constellation--alpha {
+    top: 6.25rem;
+    right: 1rem;
+    width: 11rem;
+    height: 4.5rem;
+    opacity: 0.28;
+  }
+
+  .presentation-backdrop__constellation--beta {
+    left: 1rem;
+    bottom: 16rem;
+    width: 9rem;
+    height: 4rem;
+    opacity: 0.22;
+  }
+
+  .presentation-backdrop__constellation--gamma,
+  .presentation-backdrop__constellation--delta {
+    width: 10rem;
+    height: 4rem;
+    opacity: 0.18;
+  }
+
+  .presentation-backdrop__constellation--gamma {
+    top: 48%;
+    right: 0.5rem;
+  }
+
+  .presentation-backdrop__constellation--delta {
+    left: 0.5rem;
+    bottom: 7%;
+  }
+
+  .presentation-backdrop__orbit-cluster {
+    top: 8rem;
+    left: -6.5rem;
+    width: 17rem;
+    height: 17rem;
+    opacity: 0.22;
+  }
+
+  .presentation-backdrop__orbit-cluster--lower {
+    right: -7rem;
+    bottom: 10rem;
+    width: 14rem;
+    height: 14rem;
+    opacity: 0.14;
+  }
+
+  .presentation-backdrop__solar-system {
+    right: -1.5rem;
+    bottom: 9.5rem;
+    width: 11rem;
+    height: 11rem;
+    opacity: 0.2;
+  }
+
+  .presentation-backdrop__solar-system--mid {
+    left: -2rem;
+    top: 28rem;
+    width: 8rem;
+    height: 8rem;
+    opacity: 0.14;
+  }
+
+  .presentation-backdrop__grid {
+    height: 26vh;
+    opacity: 0.3;
+  }
+
+  .presentation-backdrop__glow--moon {
+    top: 4.25rem;
+    right: 1rem;
+    width: 7rem;
+    height: 7rem;
+    opacity: 0.2;
+  }
+
+  .page-section::before {
+    background:
+      linear-gradient(180deg, rgba(148, 163, 184, 0.03), transparent 18%),
+      linear-gradient(90deg, transparent, rgba(15, 23, 42, 0.12) 18%, rgba(15, 23, 42, 0.12) 82%, transparent);
+  }
+
+  .surface-hover:hover {
+    transform: none;
+    box-shadow: var(--panel-shadow);
+  }
+}

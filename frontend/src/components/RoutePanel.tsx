@@ -20,26 +20,19 @@ function WaypointItem({
   return (
     <div className="flex items-start gap-3">
       <div className="flex flex-col items-center">
-        <div className="w-3 h-3 rounded-full bg-gray-600 border-2 border-gray-900 z-10" />
-        {index > 0 && (
-          <div className="w-0.5 h-full bg-gray-700 mt-1" />
-        )}
-        {index > 0 && (
-          <div className="w-0.5 h-full bg-gray-700" />
-        )}
+        <div className="z-10 h-3 w-3 rounded-full border-2 border-gray-900 bg-gray-600" />
+        {index > 0 && <div className="h-full w-0.5 bg-gray-700" />}
       </div>
-      <div className="flex-1 min-w-0 pt-1">
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-mono font-medium text-white">
-            {waypoint.label}
-          </span>
+      <div className="min-w-0 flex-1 pt-0.5">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs font-medium text-white">{waypoint.label}</span>
           {waypoint.is_science_target && (
-            <span className="px-1.5 py-0.5 text-[10px] font-mono bg-blue-900/50 text-blue-300 rounded border border-blue-800">
+            <span className="rounded border border-blue-800 bg-blue-900/50 px-1.5 py-0.5 text-[10px] font-mono text-blue-300">
               SCIENCE
             </span>
           )}
         </div>
-        <div className="text-[10px] text-gray-500 font-mono mt-0.5">
+        <div className="mt-1 break-words text-[10px] font-mono leading-relaxed text-gray-500">
           ID: {waypoint.id} | Pos: ({waypoint.x.toFixed(2)}, {waypoint.y.toFixed(2)})
         </div>
       </div>
@@ -57,34 +50,28 @@ export function RoutePanel({
 
   if (!route) {
     return (
-      <div className={clsx('p-4 bg-gray-900/50 rounded-lg border border-gray-700', className)}>
-        <h3 className="text-sm font-semibold text-gray-300 mb-3">ACTIVE ROUTE</h3>
-        <p className="text-gray-500 text-sm">No route data available</p>
+      <div className={clsx('rounded-2xl border border-gray-700 bg-gray-900/50 p-5', className)}>
+        <h3 className="mb-4 text-sm font-semibold text-gray-300">ACTIVE ROUTE</h3>
+        <p className="text-sm text-gray-500">No route data available</p>
       </div>
     );
   }
 
   return (
-    <div className={clsx('p-4 bg-gray-900/50 rounded-lg border border-gray-700', className)}>
-      <h3 className="text-sm font-semibold text-gray-300 mb-3 flex items-center gap-2">
-        <span className="w-2 h-2 rounded-full bg-blue-500" />
+    <div className={clsx('rounded-2xl border border-gray-700 bg-gray-900/50 p-5', className)}>
+      <h3 className="mb-4 flex flex-wrap items-center gap-2 text-sm font-semibold text-gray-300">
+        <span className="h-2 w-2 rounded-full bg-blue-500" />
         ACTIVE ROUTE
-        <span className="text-xs text-gray-500 font-mono">
-          ({route.waypoints.length} waypoints)
-        </span>
+        <span className="text-xs font-mono text-gray-500">({route.waypoints.length} waypoints)</span>
       </h3>
       {approvedPlanLabel && (
-        <div className="text-[10px] text-gray-400 font-mono mb-2">
+        <div className="mb-3 text-[10px] font-mono leading-relaxed text-gray-400">
           Approved plan: {approvedPlanLabel}
         </div>
       )}
-      <div className="space-y-4">
+      <div className="space-y-5">
         {route.waypoints.map((waypoint, index) => (
-          <WaypointItem
-            key={waypoint.id}
-            waypoint={waypoint}
-            index={index}
-          />
+          <WaypointItem key={waypoint.id} waypoint={waypoint} index={index} />
         ))}
       </div>
     </div>

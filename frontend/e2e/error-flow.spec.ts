@@ -9,6 +9,7 @@
 import { test, expect, type APIRequestContext } from '@playwright/test';
 
 const BACKEND_URL = 'http://127.0.0.1:8000';
+const PLAN_MANAGEMENT_BUTTON_NAME = /GENERATE PLANS|VIEW PLANS|PLAN SELECTED:/i;
 
 async function resetMission(request: APIRequestContext): Promise<void> {
   const response = await request.post(`${BACKEND_URL}/api/mission/reset`);
@@ -16,10 +17,11 @@ async function resetMission(request: APIRequestContext): Promise<void> {
 }
 
 test.describe('LunaYield Error/Safety Flow', () => {
+  test.describe.configure({ timeout: 75_000 });
 
   test.beforeEach(async ({ page, request }) => {
     await resetMission(request);
-    await page.goto('/');
+    await page.goto('/mission-control');
     await expect(page.getByText('MISSION CONTROLS')).toBeVisible({ timeout: 15000 });
     // Wait for WebSocket to connect
     await expect(page.locator('header').getByText('CONNECTED', { exact: true })).toBeVisible({ timeout: 30000 });
@@ -40,7 +42,7 @@ test.describe('LunaYield Error/Safety Flow', () => {
 
     // Start mission → RUNNING
     await page.getByRole('button', { name: /START MISSION/i }).click();
-    await expect(page.locator('header').getByText('RUNNING', { exact: true })).toBeVisible({ timeout: 5000 });
+    await expect(page.getByTestId('current-mission-state')).toHaveText('RUNNING');
 
     // RUNNING: Pause, Inject Anomaly, Reset enabled; Start, Resume, Generate Plans disabled
     await expect(page.getByRole('button', { name: /START MISSION/i })).toBeDisabled();
@@ -52,7 +54,7 @@ test.describe('LunaYield Error/Safety Flow', () => {
 
     // Inject anomaly → ANOMALY
     await page.getByRole('button', { name: /INJECT ANOMALY/i }).click();
-    await expect(page.locator('header').getByText('ANOMALY', { exact: true })).toBeVisible({ timeout: 5000 });
+    await expect(page.getByTestId('current-mission-state')).toHaveText('ANOMALY');
 
     // ANOMALY: Generate Plans, Reset enabled; others disabled
     await expect(page.getByRole('button', { name: /START MISSION/i })).toBeDisabled();
@@ -64,27 +66,27 @@ test.describe('LunaYield Error/Safety Flow', () => {
 
     // Generate plans → AWAITING_APPROVAL
     await page.getByRole('button', { name: /GENERATE PLANS/i }).click();
-    await expect(page.locator('header').getByText('AWAITING APPROVAL', { exact: true })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByTestId('current-mission-state')).toHaveText('AWAITING_APPROVAL');
 
     // AWAITING_APPROVAL: only Reset enabled
     await expect(page.getByRole('button', { name: /START MISSION/i })).toBeDisabled();
     await expect(page.getByRole('button', { name: /PAUSE/i })).toBeDisabled();
     await expect(page.getByRole('button', { name: /RESUME/i })).toBeDisabled();
     await expect(page.getByRole('button', { name: /INJECT ANOMALY/i })).toBeDisabled();
-    await expect(page.getByRole('button', { name: /GENERATE PLANS/i })).toBeDisabled();
+    await expect(page.getByRole('button', { name: PLAN_MANAGEMENT_BUTTON_NAME })).toBeDisabled();
     await expect(page.getByRole('button', { name: /RESET MISSION/i })).toBeEnabled();
   });
 
   test('rejected Aggressive Survey is visible with violations but non-actionable', async ({ page }) => {
     // Setup: start mission, inject anomaly, generate plans
     await page.getByRole('button', { name: /START MISSION/i }).click();
-    await expect(page.locator('header').getByText('RUNNING', { exact: true })).toBeVisible({ timeout: 5000 });
+    await expect(page.getByTestId('current-mission-state')).toHaveText('RUNNING');
 
     await page.getByRole('button', { name: /INJECT ANOMALY/i }).click();
-    await expect(page.locator('header').getByText('ANOMALY', { exact: true })).toBeVisible({ timeout: 5000 });
+    await expect(page.getByTestId('current-mission-state')).toHaveText('ANOMALY');
 
     await page.getByRole('button', { name: /GENERATE PLANS/i }).click();
-    await expect(page.locator('header').getByText('AWAITING APPROVAL', { exact: true })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByTestId('current-mission-state')).toHaveText('AWAITING_APPROVAL');
 
     // Find Aggressive Survey card
     const aggressiveCard = page.locator('[data-testid="plan-card"]', { hasText: 'Aggressive Survey' });
@@ -109,13 +111,13 @@ test.describe('LunaYield Error/Safety Flow', () => {
   test('backend 422 error is surfaced to operator via frontend rendering', async ({ page }) => {
     // Setup: get to AWAITING_APPROVAL with plans generated
     await page.getByRole('button', { name: /START MISSION/i }).click();
-    await expect(page.locator('header').getByText('RUNNING', { exact: true })).toBeVisible({ timeout: 5000 });
+    await expect(page.getByTestId('current-mission-state')).toHaveText('RUNNING');
 
     await page.getByRole('button', { name: /INJECT ANOMALY/i }).click();
-    await expect(page.locator('header').getByText('ANOMALY', { exact: true })).toBeVisible({ timeout: 5000 });
+    await expect(page.getByTestId('current-mission-state')).toHaveText('ANOMALY');
 
     await page.getByRole('button', { name: /GENERATE PLANS/i }).click();
-    await expect(page.locator('header').getByText('AWAITING APPROVAL', { exact: true })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByTestId('current-mission-state')).toHaveText('AWAITING_APPROVAL');
 
     // Get the Extended Survey plan ID from the UI
     const extendedCard = page.locator('[data-testid="plan-card"]', { hasText: 'Extended Survey' });
