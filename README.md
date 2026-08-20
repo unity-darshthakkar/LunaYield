@@ -6,7 +6,17 @@ A rover has limited battery, storage, communication windows, and multiple scienc
 
 ---
 
-## Implemented Capabilities: Phases 1–5 ✅ COMPLETE
+## Live Demo
+
+**Deployed application:** https://lunayield.onrender.com
+
+The complete LunaYield presentation site, Mission Control interface, REST API, and WebSocket telemetry are deployed together as a single Dockerized Render Web Service.
+
+> The free Render instance may spin down after inactivity, so the first request can take additional time while the service wakes.
+
+---
+
+## Implemented Capabilities: Phases 1–6 ✅ COMPLETE
 
 ### Phase 1 — Vertical MVP
 | Capability | Status |
@@ -83,7 +93,7 @@ A rover has limited battery, storage, communication windows, and multiple scienc
 | **Fail-closed approval**: approve button only when backend returns explicit `is_valid=true` | ✅ |
 | Missing/loading/unavailable/incomplete validation → no approval controls | ✅ |
 | Terminal approval states: APPROVED, REJECTED, VALIDATION_FAILED, NOT_FOUND, ALREADY_APPROVED | ✅ |
-| **No execution controls** — approval records intent only | ✅ |
+| **No strategy execution controls** — strategy approval records operator intent only | ✅ |
 | 8 integration regression tests | ✅ |
 
 ---
@@ -97,6 +107,20 @@ LunaYield Mission Lab
 ├── docs/           # Architecture, demo instructions, Bob evidence log
 ├── datasets/       # Small processed demo assets only
 └── preprocessing/  # Offline-only data prep (never in deployed backend)
+```
+
+### Deployment
+
+LunaYield is deployed as a single Dockerized web service:
+
+```text
+Render Web Service
+├── FastAPI backend
+│   ├── REST API under /api
+│   ├── WebSocket at /api/ws/mission
+│   └── SQLite runtime persistence
+└── React/Vite production build
+    └── Served by FastAPI with SPA route fallback
 ```
 
 ### Backend Services
@@ -130,7 +154,7 @@ LunaYield Mission Lab
 - Backend: Python 3.12 · FastAPI · Pydantic · SQLModel/SQLite · FastAPI WebSockets
 - Frontend: React 18 · TypeScript · Vite · Tailwind CSS · TanStack Query · Zustand
 - AI/ML: **None in deployed backend** — all forecasting/anomaly/strategy are deterministic
-- Testing: Pytest (backend: 318 tests) · Vitest (frontend: 182 tests) · Playwright (E2E)
+- Testing: Pytest (backend: 318 tests) · Vitest (frontend: 183 tests) · Playwright (5 E2E tests)
 
 ---
 
@@ -149,7 +173,7 @@ python -m venv .venv
 pip install -e ".[dev]"
 python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
-Health check: `http://127.0.0.1:8000/api/health`
+Health check: `http://127.0.0.1:8000/health`
 
 ### Frontend
 ```powershell
@@ -196,7 +220,7 @@ cd frontend && npx playwright test
   - Never recommended
   - Never have an active approval button
   - Never executable
-- **Approval re-runs** deterministic validation independently
+- **Strategy approval re-runs** deterministic strategy validation independently
 - **Single Phase 1 safety rule** enforced on candidate plans:
   - `RETURN_BATTERY_MIN_20PCT` — predicted return battery ≥ 20%
 - **Phase 4 strategy validation** enforces schema/structure rules (required fields, priority bounds, action whitelist, resource consistency, approval requirement) — **NOT resource safety thresholds**
