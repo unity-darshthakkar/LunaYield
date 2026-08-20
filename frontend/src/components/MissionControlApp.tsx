@@ -1,6 +1,6 @@
 /** LunaYield Mission Control App - Extracted core Mission Control composition */
 
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   useMissionState,
   useStartMission,
@@ -11,13 +11,6 @@ import {
   useGeneratePlans,
   useApprovePlan,
   useMissionError,
-  useCandidatePlans,
-  useAuditTrail,
-  useActiveRoute,
-  useOriginalRoute,
-  useAnomalyActive,
-  useMissionStatus,
-  useMissionResources,
   useForecast,
   useAnomalies,
   useStrategies,
@@ -41,13 +34,18 @@ import { PlanStatus } from '../types/mission';
 
 export function MissionControlApp() {
   const { data: mission, isLoading, error: queryError } = useMissionState();
-  const missionStatus = useMissionStatus();
-  const resources = useMissionResources();
-  const candidatePlans = useCandidatePlans() ?? [];
-  const auditTrail = useAuditTrail();
-  const activeRoute = useActiveRoute();
-  const originalRoute = useOriginalRoute();
-  const anomalyActive = useAnomalyActive();
+  const missionStatus = mission?.status;
+  const resources = mission?.resources;
+  const candidatePlans = mission?.candidate_plans ?? [];
+  const auditTrail = mission?.audit_trail;
+  const activeRoute = mission?.active_route;
+  const originalRoute = mission?.original_route;
+  const anomalyActive = mission?.anomaly_active;
+  const scienceCollectionComplete =
+    activeRoute?.waypoints.filter((waypoint) => waypoint.is_science_target).length > 0 &&
+    activeRoute.waypoints
+      .filter((waypoint) => waypoint.is_science_target)
+      .every((waypoint) => waypoint.science_collected) === true;
 
   const [forecastHorizon, setForecastHorizon] = useState<number>(3600);
   const forecastParams = { horizon: forecastHorizon, interval: 60 };
@@ -100,12 +98,57 @@ export function MissionControlApp() {
   const generatePlansError = useMissionError(generatePlans);
   const approvePlanError = useMissionError(approvePlan);
 
+  const clearActionFeedback = useCallback(() => {
+    startMission.reset();
+    pauseMission.reset();
+    resumeMission.reset();
+    resetMission.reset();
+    injectAnomaly.reset();
+    generatePlans.reset();
+    approvePlan.reset();
+  }, [approvePlan, generatePlans, injectAnomaly, pauseMission, resetMission, resumeMission, startMission]);
+
   const { connectionStatus } = useMissionSocket({
     enabled: true,
     onTelemetryUpdate: setLiveTelemetry,
   });
 
+  const handleStartMission = () => {
+    clearActionFeedback();
+    startMission.mutate();
+  };
+
+  const handlePauseMission = () => {
+    clearActionFeedback();
+    pauseMission.mutate();
+  };
+
+  const handleResumeMission = () => {
+    clearActionFeedback();
+    resumeMission.mutate();
+  };
+
+  const handleInjectAnomaly = () => {
+    clearActionFeedback();
+    injectAnomaly.mutate();
+  };
+
+  const handleGeneratePlans = () => {
+    if (candidatePlans.length > 0) {
+      setPlansOpen(true);
+      return;
+    }
+    clearActionFeedback();
+    generatePlans.mutate();
+  };
+
+  const handleResetMission = () => {
+    clearActionFeedback();
+    resetMission.mutate();
+  };
+
   const handleApprovePlan = (planId: string) => {
+    clearActionFeedback();
     setPlansOpen(false);
     approvePlan.mutate(planId);
   };
@@ -125,6 +168,29 @@ export function MissionControlApp() {
       setPlansOpen(false);
     }
   }, [resetMission.isSuccess]);
+
+  useEffect(() => {
+    if (
+      startMission.isSuccess ||
+      pauseMission.isSuccess ||
+      resumeMission.isSuccess ||
+      resetMission.isSuccess ||
+      injectAnomaly.isSuccess ||
+      generatePlans.isSuccess ||
+      approvePlan.isSuccess
+    ) {
+      clearActionFeedback();
+    }
+  }, [
+    approvePlan.isSuccess,
+    clearActionFeedback,
+    generatePlans.isSuccess,
+    injectAnomaly.isSuccess,
+    pauseMission.isSuccess,
+    resetMission.isSuccess,
+    resumeMission.isSuccess,
+    startMission.isSuccess,
+  ]);
 
   useEffect(() => {
     if (candidatePlans.length > 0) {
@@ -182,7 +248,11 @@ export function MissionControlApp() {
           <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
             <div className="space-y-5">
               <div className="grid grid-cols-1 gap-5">
-                <ResourcePanel resources={liveTelemetry?.resources ?? resources} />
+                <ResourcePanel
+                  resources={liveTelemetry?.resources ?? resources}
+                  missionStatus={missionStatus}
+                  scienceCollectionComplete={scienceCollectionComplete}
+                />
               </div>
               <RoutePanel
                 activeRoute={activeRoute}
@@ -197,18 +267,12 @@ export function MissionControlApp() {
                 anomalyActive={anomalyActive}
                 candidatePlansCount={candidatePlans.length}
                 approvedPlanLabel={approvedPlanLabel}
-                onStart={() => startMission.mutate()}
-                onPause={() => pauseMission.mutate()}
-                onResume={() => resumeMission.mutate()}
-                onInjectAnomaly={() => injectAnomaly.mutate()}
-                onGeneratePlans={() => {
-                  if (candidatePlans.length > 0) {
-                    setPlansOpen(true);
-                    return;
-                  }
-                  generatePlans.mutate();
-                }}
-                onReset={() => resetMission.mutate()}
+                onStart={handleStartMission}
+                onPause={handlePauseMission}
+                onResume={handleResumeMission}
+                onInjectAnomaly={handleInjectAnomaly}
+                onGeneratePlans={handleGeneratePlans}
+                onReset={handleResetMission}
                 startError={startError}
                 pauseError={pauseError}
                 resumeError={resumeError}

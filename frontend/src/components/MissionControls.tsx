@@ -87,6 +87,7 @@ export function MissionControls({
   const isAnomaly = missionStatus === 'ANOMALY';
   const isAwaitingApproval = missionStatus === 'AWAITING_APPROVAL';
   const isExecuting = missionStatus === 'EXECUTING';
+  const isCompleted = missionStatus === 'COMPLETED';
   const canPause = isRunning;
   const canResume = isPaused;
   const canManagePlans = isAnomaly;
@@ -103,6 +104,8 @@ export function MissionControls({
         ? 'text-orange-300'
         : isPaused
           ? 'text-yellow-300'
+          : isCompleted
+            ? 'text-cyan-300'
           : isRunning
             ? 'text-green-300'
             : 'text-white';
@@ -182,6 +185,10 @@ export function MissionControls({
           <div className={`flex items-center gap-1 ${isPaused ? 'text-yellow-400' : 'text-gray-500'}`}>
             <span className="h-1.5 w-1.5 rounded-full bg-current" />
             PAUSED
+          </div>
+          <div className={`flex items-center gap-1 ${isCompleted ? 'text-cyan-400' : 'text-gray-500'}`}>
+            <span className="h-1.5 w-1.5 rounded-full bg-current" />
+            COMPLETED
           </div>
           <div className={`flex items-center gap-1 ${isAnomaly ? 'text-orange-400' : 'text-gray-500'}`}>
             <span className="h-1.5 w-1.5 rounded-full bg-current" />

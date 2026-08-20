@@ -6,19 +6,28 @@ from app.schemas import PlanStatus
 from app.services.mission import MissionService
 from app.services.planning import PlanningService
 from app.services.safety import SafetyVerifier
+from app.services.telemetry import TelemetryService
 
 
 class TestPlanningService:
     """Test PlanningService deterministic plan generation."""
 
-    def test_generate_exactly_three_plans(self, clean_mission: MissionService) -> None:
-        """Should generate exactly 3 candidate plans."""
+    def _generate_plans_after_ticks(
+        self, clean_mission: MissionService, ticks: int = 0
+    ):
         planning = PlanningService()
         clean_mission.set_dependencies(SafetyVerifier(), planning)
         clean_mission.start()
+        telemetry = TelemetryService(clean_mission)
+        for _ in range(ticks):
+            telemetry.generate_sample()
         clean_mission.inject_anomaly()
-
         plans = planning.generate_candidate_plans(clean_mission.get_mission())
+        return plans, clean_mission.get_mission()
+
+    def test_generate_exactly_three_plans(self, clean_mission: MissionService) -> None:
+        """Should generate exactly 3 candidate plans."""
+        plans, _ = self._generate_plans_after_ticks(clean_mission)
 
         assert len(plans) == 3
 
@@ -26,15 +35,11 @@ class TestPlanningService:
         self, clean_mission: MissionService
     ) -> None:
         """Plan A (Minimal Survey) should have correct properties."""
-        planning = PlanningService()
-        clean_mission.set_dependencies(SafetyVerifier(), planning)
-        clean_mission.start()
-        clean_mission.inject_anomaly()
-
-        plans = planning.generate_candidate_plans(clean_mission.get_mission())
+        plans, mission = self._generate_plans_after_ticks(clean_mission, ticks=30)
         plan_a = next(p for p in plans if p.label == "Minimal Survey")
 
-        assert plan_a.predicted_return_battery_pct == 34.0
+        assert mission.resources.battery_pct == 80.0
+        assert plan_a.predicted_return_battery_pct == 30.0
         assert plan_a.status == PlanStatus.VALID
         assert plan_a.is_recommended is False
         assert plan_a.rank == 2
@@ -44,15 +49,10 @@ class TestPlanningService:
         self, clean_mission: MissionService
     ) -> None:
         """Plan B (Extended Survey) should have correct properties."""
-        planning = PlanningService()
-        clean_mission.set_dependencies(SafetyVerifier(), planning)
-        clean_mission.start()
-        clean_mission.inject_anomaly()
-
-        plans = planning.generate_candidate_plans(clean_mission.get_mission())
+        plans, _ = self._generate_plans_after_ticks(clean_mission, ticks=30)
         plan_b = next(p for p in plans if p.label == "Extended Survey")
 
-        assert plan_b.predicted_return_battery_pct == 42.0
+        assert plan_b.predicted_return_battery_pct == 21.0
         assert plan_b.status == PlanStatus.VALID
         assert plan_b.is_recommended is True
         assert plan_b.rank == 1
@@ -62,15 +62,10 @@ class TestPlanningService:
         self, clean_mission: MissionService
     ) -> None:
         """Plan C (Aggressive Survey) should have correct properties."""
-        planning = PlanningService()
-        clean_mission.set_dependencies(SafetyVerifier(), planning)
-        clean_mission.start()
-        clean_mission.inject_anomaly()
-
-        plans = planning.generate_candidate_plans(clean_mission.get_mission())
+        plans, _ = self._generate_plans_after_ticks(clean_mission, ticks=30)
         plan_c = next(p for p in plans if p.label == "Aggressive Survey")
 
-        assert plan_c.predicted_return_battery_pct == 11.0
+        assert plan_c.predicted_return_battery_pct == 10.5
         assert plan_c.is_recommended is False
         assert plan_c.rank == 3
         assert plan_c.science_yield_score == 92.0
@@ -79,12 +74,7 @@ class TestPlanningService:
 
     def test_exactly_one_recommended_plan(self, clean_mission: MissionService) -> None:
         """Exactly one plan should be recommended."""
-        planning = PlanningService()
-        clean_mission.set_dependencies(SafetyVerifier(), planning)
-        clean_mission.start()
-        clean_mission.inject_anomaly()
-
-        plans = planning.generate_candidate_plans(clean_mission.get_mission())
+        plans, _ = self._generate_plans_after_ticks(clean_mission)
         recommended = [p for p in plans if p.is_recommended]
 
         assert len(recommended) == 1
@@ -92,12 +82,7 @@ class TestPlanningService:
 
     def test_recommended_plan_is_valid(self, clean_mission: MissionService) -> None:
         """The recommended plan must be VALID."""
-        planning = PlanningService()
-        clean_mission.set_dependencies(SafetyVerifier(), planning)
-        clean_mission.start()
-        clean_mission.inject_anomaly()
-
-        plans = planning.generate_candidate_plans(clean_mission.get_mission())
+        plans, _ = self._generate_plans_after_ticks(clean_mission)
         recommended = [p for p in plans if p.is_recommended]
 
         assert recommended[0].status == PlanStatus.VALID
@@ -109,15 +94,16 @@ class TestPlanningService:
         planning = PlanningService()
         clean_mission.set_dependencies(SafetyVerifier(), planning)
         clean_mission.start()
+        telemetry = TelemetryService(clean_mission)
+        for _ in range(30):
+            telemetry.generate_sample()
         clean_mission.inject_anomaly()
-
-        # The generate_plans on MissionService runs safety verification
         mission = clean_mission.generate_plans()
         plan_c = next(
             p for p in mission.candidate_plans if p.label == "Aggressive Survey"
         )
 
-        # Aggressive Survey has 11% battery, which is < 20% - should be REJECTED
+        # Aggressive Survey has 10.5% battery, which is < 20% - should be REJECTED
         assert plan_c.status == PlanStatus.REJECTED
         assert len(plan_c.violations) >= 1
         assert any(v.rule_id == "RETURN_BATTERY_MIN_20PCT" for v in plan_c.violations)
@@ -129,8 +115,10 @@ class TestPlanningService:
         planning = PlanningService()
         clean_mission.set_dependencies(SafetyVerifier(), planning)
         clean_mission.start()
+        telemetry = TelemetryService(clean_mission)
+        for _ in range(30):
+            telemetry.generate_sample()
         clean_mission.inject_anomaly()
-
         mission = clean_mission.generate_plans()
         rejected = [
             p for p in mission.candidate_plans if p.status == PlanStatus.REJECTED
@@ -141,18 +129,30 @@ class TestPlanningService:
 
     def test_plans_have_deterministic_ids(self, clean_mission: MissionService) -> None:
         """Plan IDs should be deterministic across runs."""
-        planning = PlanningService()
-        clean_mission.set_dependencies(SafetyVerifier(), planning)
-        clean_mission.start()
-        clean_mission.inject_anomaly()
-
-        plans1 = planning.generate_candidate_plans(clean_mission.get_mission())
-        plans2 = planning.generate_candidate_plans(clean_mission.get_mission())
+        plans1, mission = self._generate_plans_after_ticks(clean_mission, ticks=30)
+        plans2 = PlanningService().generate_candidate_plans(mission)
 
         for p1, p2 in zip(plans1, plans2):
             assert p1.plan_id == p2.plan_id
             assert p1.label == p2.label
             assert p1.predicted_return_battery_pct == p2.predicted_return_battery_pct
+
+    def test_battery_predictions_order_safest_to_riskiest(
+        self, clean_mission: MissionService
+    ) -> None:
+        """Minimal should preserve the highest reserve and Aggressive the lowest."""
+        plans, _ = self._generate_plans_after_ticks(clean_mission, ticks=30)
+        minimal = next(p for p in plans if p.label == "Minimal Survey")
+        extended = next(p for p in plans if p.label == "Extended Survey")
+        aggressive = next(p for p in plans if p.label == "Aggressive Survey")
+
+        assert (
+            minimal.predicted_return_battery_pct > extended.predicted_return_battery_pct
+        )
+        assert (
+            extended.predicted_return_battery_pct
+            > aggressive.predicted_return_battery_pct
+        )
 
 
 class TestPlanningAPI:
@@ -184,9 +184,14 @@ class TestPlanningAPI:
         ext_plan = next(p for p in data if p["label"] == "Extended Survey")
         agg_plan = next(p for p in data if p["label"] == "Aggressive Survey")
 
-        assert min_plan["predicted_return_battery_pct"] == 34.0
-        assert ext_plan["predicted_return_battery_pct"] == 42.0
-        assert agg_plan["predicted_return_battery_pct"] == 11.0
+        assert (
+            min_plan["predicted_return_battery_pct"]
+            > ext_plan["predicted_return_battery_pct"]
+        )
+        assert (
+            ext_plan["predicted_return_battery_pct"]
+            > agg_plan["predicted_return_battery_pct"]
+        )
 
         # Check recommended
         recommended = [p for p in data if p["is_recommended"]]

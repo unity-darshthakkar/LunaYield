@@ -335,3 +335,132 @@ f978351 - Phase 1: Mission engine, planning, safety, telemetry, 105 tests
 [Phase 5] - Operator UI, 182 frontend tests, 8 integration tests
 [Phase 6] - Documentation cleanup, truthfulness pass, submission prep
 ```
+
+## Phase 6B - Mission Simulation Coherence Repairs
+
+**Branch**: current final-demo/submission working tree
+
+### Summary
+Made the seeded rover simulation coherent for judges without redesigning the UI or moving mission logic into the frontend. The backend now owns route progression, science-linked storage accumulation, nominal completion, defensive battery anomaly transitions, approved recovery-route updates, and richer mission audit events.
+
+### Key Deliverables
+- Added backend-authoritative waypoint progress states: `COMPLETED`, `CURRENT`, `UPCOMING`, `SKIPPED`
+- Seed route now initializes with progress metadata and launches from Base Camp into the first science leg
+- Telemetry now mutates authoritative mission state every tick instead of emitting read-only derived samples
+- Storage no longer grows continuously during travel; deterministic one-time science gains occur only at science waypoints
+- Nominal route timing now completes in 296 seconds with final battery 26.0% and final storage 84.0%
+- Critical battery depletion now transitions through the existing anomaly architecture before battery reaches 0%
+- Mission now transitions into `COMPLETED`, stops progression, and preserves final route/resource state
+- Approved recovery plans now update `active_route` with progress-aware plan waypoints and clear `anomaly_active`
+- Added meaningful audit events for waypoint arrival, science collection, route updates, automatic anomalies, and mission completion
+- Mission snapshots are now persisted during live telemetry progression so restoration preserves route progress
+- RoutePanel now renders backend-owned waypoint status badges without redesigning the existing presentation
+- WebSocket telemetry events now invalidate mission-state queries so the frontend refetches authoritative route/status changes
+
+### Files Updated
+- `backend/app/main.py`
+- `backend/app/schemas.py`
+- `backend/app/seed.py`
+- `backend/app/services/mission.py`
+- `backend/app/services/planning.py`
+- `backend/app/services/telemetry.py`
+- `backend/app/services/route_progress.py` (new)
+- `backend/tests/test_approval.py`
+- `backend/tests/test_mission_lifecycle.py`
+- `backend/tests/test_persistence.py`
+- `backend/tests/test_phase4d.py`
+- `backend/tests/test_telemetry.py`
+- `frontend/src/components/RoutePanel.tsx`
+- `frontend/src/components/RoutePanel.test.tsx`
+- `frontend/src/hooks/useMissionSocket.ts`
+- `frontend/src/types/mission.ts`
+
+### Validation
+- Backend targeted regression batches: 321 tests passed across all backend test files
+- Frontend Vitest: 184 tests passed
+- Frontend lint: passed
+- Frontend build: passed
+- No backend safety-verification rules were weakened
+- No frontend execution behavior was introduced
+
+## Phase 6C - Mission Sync, Completion Semantics, and Judge-Facing Nominal Finish
+
+**Branch**: current final-demo/submission working tree
+
+### Summary
+Tightened the final demo path without redesigning the UI. The frontend now refetches authoritative mission state on live telemetry updates, audit history stays current during mission progression, stale control errors are cleared when a new action cycle starts, the nominal science run ends at 100% planned collection without being mislabeled as an unsafe storage anomaly, and completed-state controls/readouts stay visually coherent.
+
+### Key Deliverables
+- Mission WebSocket telemetry updates now invalidate the authoritative mission-state query so route, resources, current state, and audit data stay synchronized
+- Mission Control now derives route, audit, anomaly, resource, and approved-plan display from a single mission-state source instead of redundant hook reads
+- Reset/start/successful actions clear stale control error banners without weakening real failure handling
+- Nominal science storage gains now total exactly 100% across the three seeded science targets
+- Storage anomaly semantics now suppress the false "storage full" anomaly only for the completed seeded nominal science target case; real unsafe storage behavior remains intact
+- Resource and Mission Controls panels now render completed-state feedback more clearly without changing the frozen visual design
+- Added focused frontend tests for socket-driven refetch, audit refresh visibility, stale error clearing, and completed-state control gating
+- Added backend/frontend determinism safeguards for tests that need a frozen mission state while preserving the production telemetry loop
+
+### Files Updated
+- `backend/app/main.py`
+- `backend/app/services/anomaly.py`
+- `backend/app/services/route_progress.py`
+- `backend/tests/test_phase3b.py`
+- `backend/tests/test_phase3c.py`
+- `backend/tests/test_phase4a.py`
+- `backend/tests/test_telemetry.py`
+- `frontend/src/components/AuditPanel.tsx`
+- `frontend/src/components/AuditPanel.test.tsx`
+- `frontend/src/components/MissionControlApp.tsx`
+- `frontend/src/components/MissionControlApp.errors.test.tsx` (new)
+- `frontend/src/components/MissionControlApp.sync.test.tsx` (new)
+- `frontend/src/components/MissionControls.tsx`
+- `frontend/src/components/MissionControls.test.tsx`
+- `frontend/src/components/ResourcePanel.tsx`
+- `frontend/src/hooks/useMissionSocket.ts`
+- `frontend/src/hooks/useMissionSocket.test.tsx` (new)
+
+### Validation
+- Focused backend regressions:
+  - `backend/tests/test_telemetry.py` + `backend/tests/test_phase3b.py`: 36 passed
+  - `backend/tests/test_phase3c.py::TestForecastingAnomalyIntegration::test_repeated_identical_requests_produce_identical_results`: passed
+  - `backend/tests/test_phase4a.py::TestStrategyGeneration::test_repeated_deterministic_behavior`: passed
+- Full backend suite: 322 passed
+- Full frontend Vitest: 190 passed
+- Frontend lint: passed
+- Frontend build: passed
+- Playwright not rerun in this environment
+
+## Phase 6D - Physical Battery Degradation for Recovery-Plan Tradeoffs
+
+**Branch**: current final-demo/submission working tree
+
+### Summary
+Implemented the final mission-logic change for the judge-facing anomaly story. The manual anomaly is no longer cosmetic: it now applies a deterministic one-time battery degradation to backend-authoritative mission state, recovery-plan predicted return batteries are derived from the same route/timing model used by execution, and the approved Minimal / Extended plans now finish near their shown predictions while preserving the unchanged nominal mission path.
+
+### Key Deliverables
+- `inject_anomaly()` now applies a deterministic 5% immediate battery loss and records both `anomaly.injected` and `battery.degraded`
+- Recovery-plan battery predictions now come from authoritative current battery plus remaining route duration, instead of hardcoded plan card values
+- Route-duration logic now accounts for the Minimal direct-return path after skipping Ridge and the shorter Aggressive detour legs
+- Runtime execution still uses the same authoritative telemetry loop; no frontend battery logic was added
+- Minimal / Extended / Aggressive now tell a coherent tradeoff story around the seeded ~1 minute anomaly point:
+  - Minimal: 30.0% predicted / 30.0% actual
+  - Extended: 21.0% predicted / 21.0% actual
+  - Aggressive: 10.5% predicted and rejected by `RETURN_BATTERY_MIN_20PCT`
+- Added persistence and audit regression coverage for degraded anomaly state restoration
+
+### Files Updated
+- `backend/app/services/mission.py`
+- `backend/app/services/planning.py`
+- `backend/app/services/route_progress.py`
+- `backend/app/services/telemetry.py`
+- `backend/tests/test_approval.py`
+- `backend/tests/test_audit.py`
+- `backend/tests/test_mission_lifecycle.py`
+- `backend/tests/test_phase2f.py`
+- `backend/tests/test_planning.py`
+
+### Validation
+- Focused anomaly/runtime backend tests: 73 passed
+- Full backend suite: 326 passed
+- Frontend not rerun in this pass because no frontend code or API schema changed
+- Playwright not run in this environment

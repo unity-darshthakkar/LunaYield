@@ -1,4 +1,4 @@
-"""LunaYield Mission Lab — FastAPI application."""
+"""LunaYield Mission Lab â€” FastAPI application."""
 
 from __future__ import annotations
 
@@ -57,6 +57,7 @@ from app.ws_manager import WSConnectionManager
 async def telemetry_loop(
     telemetry_service: TelemetryService,
     ws_manager: WSConnectionManager,
+    persistence_service: MissionPersistenceService,
 ) -> None:
     """Background telemetry emission loop.
 
@@ -66,7 +67,9 @@ async def telemetry_loop(
         while True:
             sample = telemetry_service.generate_sample()
             if sample is not None:
-                # Use Pydantic v2 JSON mode for proper datetime serialization
+                mission = telemetry_service._mission_service.get_mission()
+                persistence_service.persist_snapshot(mission)
+                persistence_service.persist_new_audit_events(mission)
                 payload = sample.model_dump(mode="json")
                 await ws_manager.broadcast("telemetry.updated", payload)
             await asyncio.sleep(2.0)
@@ -181,7 +184,7 @@ def _validate_restored_mission(mission: Mission) -> None:
     # Additional state consistency checks
     # If status is EXECUTING, anomaly_active should be False
     # (can't be executing during anomaly)
-    if mission.status == MissionStatus.EXECUTING.value and mission.anomaly_active:
+    if mission.status == MissionStatus.EXECUTING and mission.anomaly_active:
         raise ValueError("Cannot be in EXECUTING state with anomaly_active=True")
 
     # If status is AWAITING_APPROVAL, candidate_plans should normally be empty
@@ -280,7 +283,7 @@ async def lifespan(app: FastAPI):
         unfinished_run = run_repo.get_latest_unfinished(seed_mission.mission_id)
 
     if unfinished_run is not None:
-        # 3a. Unfinished run exists — restore from it
+        # 3a. Unfinished run exists â€” restore from it
         run_id = unfinished_run.run_id
 
         # 3b. Get latest snapshot for this run
@@ -322,7 +325,7 @@ async def lifespan(app: FastAPI):
                 restoration_failed = True
         else:
             # Either audit reconstruction failed or no snapshot
-            # for unfinished run — corrupt/invalid
+            # for unfinished run â€” corrupt/invalid
             restoration_failed = True
 
         if restoration_failed:
@@ -348,13 +351,17 @@ async def lifespan(app: FastAPI):
             initial_mission = mission_service.get_mission()
             persistence_service.create_initial_run(initial_mission)
     else:
-        # 4. No unfinished run — retain Phase 2B behavior
+        # 4. No unfinished run â€” retain Phase 2B behavior
         # Create new run with initial snapshot and audit
         initial_mission = mission_service.get_mission()
         persistence_service.create_initial_run(initial_mission)
 
-    # Start telemetry background task
-    telemetry_task = asyncio.create_task(telemetry_loop(telemetry_service, ws_manager))
+    # Tests may disable the background loop when they need a stable mission state
+    telemetry_task = None
+    if not getattr(app.state, "disable_background_telemetry", False):
+        telemetry_task = asyncio.create_task(
+            telemetry_loop(telemetry_service, ws_manager, persistence_service)
+        )
     app.state.telemetry_task = telemetry_task
 
     yield

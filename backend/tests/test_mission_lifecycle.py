@@ -44,10 +44,14 @@ class TestMissionLifecycle:
 
     def test_inject_anomaly_from_running(self, clean_mission: MissionService) -> None:
         clean_mission.start()
+        battery_before = clean_mission.get_mission().resources.battery_pct
         mission = clean_mission.inject_anomaly()
         assert mission.status == MissionStatus.ANOMALY
         assert mission.anomaly_active is True
         assert any(e.event_type == "anomaly.injected" for e in mission.audit_trail)
+        assert any(e.event_type == "battery.degraded" for e in mission.audit_trail)
+        assert battery_before == 100.0
+        assert mission.resources.battery_pct == 95.0
 
     def test_inject_anomaly_from_non_running_raises(
         self, clean_mission: MissionService
@@ -63,6 +67,7 @@ class TestMissionLifecycle:
         assert mission.elapsed_s == 0
         assert mission.anomaly_active is False
         assert mission.candidate_plans == []
+        assert mission.resources.battery_pct == 100.0
         assert any(e.event_type == "mission.reset" for e in mission.audit_trail)
 
     def test_reset_is_deterministic(self, clean_mission: MissionService) -> None:

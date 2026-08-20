@@ -579,6 +579,38 @@ def test_anomaly_detection_with_storage_threshold(isolated_db_config: DatabaseCo
         close_test_client(client)
 
 
+def test_completed_nominal_science_target_does_not_raise_storage_anomaly(
+    isolated_db_config: DatabaseConfig,
+):
+    """A full nominal science run reaching 100% is not treated as unsafe storage."""
+    client = create_test_client(isolated_db_config)
+    try:
+        client.post("/api/mission/start")
+
+        from app.main import app
+
+        telemetry_service = app.state.telemetry_service
+        anomaly_service = app.state.anomaly_service
+        mission_service = app.state.mission_service
+
+        for _ in range(148):
+            telemetry_service.generate_sample()
+
+        mission = mission_service.get_mission()
+        assert mission.status.value == "COMPLETED"
+        assert mission.resources.storage_pct == 100.0
+
+        result = anomaly_service.detect_anomalies(
+            use_forecast=True, forecast_horizon_s=3600
+        )
+        storage_anomalies = [
+            a for a in result.anomalies if a.resource.value == "STORAGE"
+        ]
+        assert storage_anomalies == []
+    finally:
+        close_test_client(client)
+
+
 def test_anomaly_detection_with_temperature_thresholds(
     isolated_db_config: DatabaseConfig,
 ):

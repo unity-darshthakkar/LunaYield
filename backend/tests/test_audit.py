@@ -40,6 +40,7 @@ class TestAuditTrail:
         assert "mission.paused" in audit_types
         assert "mission.resumed" in audit_types
         assert "anomaly.injected" in audit_types
+        assert "battery.degraded" in audit_types
         assert "planning.started" in audit_types
         assert "plans.generated" in audit_types
         assert "plan.approved" in audit_types
@@ -56,6 +57,7 @@ class TestAuditTrail:
             "mission.paused",
             "mission.resumed",
             "anomaly.injected",
+            "battery.degraded",
             "planning.started",
             "plans.generated",
             "plan.approved",

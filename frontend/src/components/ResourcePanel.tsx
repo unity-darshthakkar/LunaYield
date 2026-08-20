@@ -1,10 +1,12 @@
 /** Resource panel displaying rover resources with progress bars */
 
-import type { RoverResources } from '../types/mission';
+import type { MissionStatus, RoverResources } from '../types/mission';
 import { clsx } from 'clsx';
 
 interface ResourcePanelProps {
   resources: RoverResources | undefined;
+  missionStatus?: MissionStatus;
+  scienceCollectionComplete?: boolean;
   className?: string;
 }
 
@@ -16,6 +18,7 @@ function ResourceBar({
   warningThreshold,
   criticalThreshold,
   invert = false,
+  nominalComplete = false,
 }: {
   label: string;
   value: number;
@@ -24,16 +27,19 @@ function ResourceBar({
   warningThreshold?: number;
   criticalThreshold?: number;
   invert?: boolean;
+  nominalComplete?: boolean;
 }) {
   const percentage = Math.max(0, Math.min(100, (value / max) * 100));
 
-  let barColor = 'bg-green-500';
-  if (invert) {
-    if (value <= criticalThreshold!) barColor = 'bg-red-500';
-    else if (value <= warningThreshold!) barColor = 'bg-yellow-500';
-  } else {
-    if (value >= criticalThreshold!) barColor = 'bg-red-500';
-    else if (value >= warningThreshold!) barColor = 'bg-yellow-500';
+  let barColor = nominalComplete ? 'bg-cyan-400' : 'bg-green-500';
+  if (!nominalComplete) {
+    if (invert) {
+      if (value <= criticalThreshold!) barColor = 'bg-red-500';
+      else if (value <= warningThreshold!) barColor = 'bg-yellow-500';
+    } else {
+      if (value >= criticalThreshold!) barColor = 'bg-red-500';
+      else if (value >= warningThreshold!) barColor = 'bg-yellow-500';
+    }
   }
 
   return (
@@ -68,7 +74,12 @@ function TimeDisplay({ label, seconds }: { label: string; seconds: number }) {
   );
 }
 
-export function ResourcePanel({ resources, className = '' }: ResourcePanelProps) {
+export function ResourcePanel({
+  resources,
+  missionStatus,
+  scienceCollectionComplete = false,
+  className = '',
+}: ResourcePanelProps) {
   if (!resources) {
     return (
       <div className={clsx('rounded-2xl border border-gray-700 bg-gray-900/50 p-5', className)}>
@@ -92,6 +103,7 @@ export function ResourcePanel({ resources, className = '' }: ResourcePanelProps)
           warningThreshold={80}
           criticalThreshold={95}
           invert={false}
+          nominalComplete={scienceCollectionComplete && missionStatus === 'COMPLETED'}
         />
         <div className="grid grid-cols-1 gap-3 rounded-xl border border-gray-800 bg-gray-950/40 p-3 sm:grid-cols-3">
           <div className="flex justify-between gap-3 text-xs font-mono sm:flex-col sm:gap-1">

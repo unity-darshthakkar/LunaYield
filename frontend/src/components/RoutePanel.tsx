@@ -1,13 +1,44 @@
 /** Route panel displaying the active route waypoints as an ordered timeline */
 
-import type { MissionRoute, RouteWaypoint } from '../types/mission';
 import { clsx } from 'clsx';
+import type { MissionRoute, RouteWaypoint } from '../types/mission';
+import { WaypointProgressStatus } from '../types/mission';
 
 interface RoutePanelProps {
   activeRoute: MissionRoute | undefined;
   originalRoute: MissionRoute | undefined;
   approvedPlanLabel?: string;
   className?: string;
+}
+
+function getWaypointStatus(waypoint: RouteWaypoint): WaypointProgressStatus {
+  return waypoint.progress_status ?? WaypointProgressStatus.UPCOMING;
+}
+
+function statusDotClass(status: WaypointProgressStatus): string {
+  switch (status) {
+    case WaypointProgressStatus.COMPLETED:
+      return 'border-emerald-400 bg-emerald-400 shadow-[0_0_14px_rgba(74,222,128,0.45)]';
+    case WaypointProgressStatus.CURRENT:
+      return 'border-cyan-300 bg-cyan-300 shadow-[0_0_16px_rgba(103,232,249,0.5)]';
+    case WaypointProgressStatus.SKIPPED:
+      return 'border-amber-300 bg-transparent';
+    default:
+      return 'border-gray-700 bg-gray-700';
+  }
+}
+
+function statusBadgeClass(status: WaypointProgressStatus): string {
+  switch (status) {
+    case WaypointProgressStatus.COMPLETED:
+      return 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300';
+    case WaypointProgressStatus.CURRENT:
+      return 'border-cyan-400/40 bg-cyan-400/10 text-cyan-200';
+    case WaypointProgressStatus.SKIPPED:
+      return 'border-amber-400/40 bg-amber-400/10 text-amber-200';
+    default:
+      return 'border-gray-700 bg-gray-800/80 text-gray-400';
+  }
 }
 
 function WaypointItem({
@@ -17,10 +48,12 @@ function WaypointItem({
   waypoint: RouteWaypoint;
   index: number;
 }) {
+  const status = getWaypointStatus(waypoint);
+
   return (
     <div className="flex items-start gap-3">
       <div className="flex flex-col items-center">
-        <div className="z-10 h-3 w-3 rounded-full border-2 border-gray-900 bg-gray-600" />
+        <div className={clsx('z-10 h-3 w-3 rounded-full border-2', statusDotClass(status))} />
         {index > 0 && <div className="h-full w-0.5 bg-gray-700" />}
       </div>
       <div className="min-w-0 flex-1 pt-0.5">
@@ -31,6 +64,14 @@ function WaypointItem({
               SCIENCE
             </span>
           )}
+          <span
+            className={clsx(
+              'rounded border px-1.5 py-0.5 text-[10px] font-mono tracking-[0.18em]',
+              statusBadgeClass(status)
+            )}
+          >
+            {status}
+          </span>
         </div>
         <div className="mt-1 break-words text-[10px] font-mono leading-relaxed text-gray-500">
           ID: {waypoint.id} | Pos: ({waypoint.x.toFixed(2)}, {waypoint.y.toFixed(2)})

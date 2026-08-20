@@ -71,14 +71,14 @@ class TestMissionRunRepository:
             repo = MissionRunRepository(session)
             run = repo.create(
                 mission_id="luna-mission-001",
-                label="Shackleton Rim Survey — Alpha",
+                label="Shackleton Rim Survey â€” Alpha",
                 seed_mission_id="luna-mission-001",
             )
             session.commit()
 
             assert run.run_id is not None
             assert run.mission_id == "luna-mission-001"
-            assert run.label == "Shackleton Rim Survey — Alpha"
+            assert run.label == "Shackleton Rim Survey â€” Alpha"
             assert run.seed_mission_id == "luna-mission-001"
             assert run.started_at is not None
             assert run.ended_at is None

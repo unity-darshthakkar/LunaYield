@@ -163,4 +163,36 @@ describe('AuditPanel', () => {
     expect(screen.getByText('mission.reset')).toBeInTheDocument();
     expect(screen.getByText('Mission reset to seed state')).toBeInTheDocument();
   });
+
+  it('displays new route, science, and completion events', () => {
+    const completedEvents: AuditEvent[] = [
+      ...mockEvents,
+      {
+        event_id: 'audit-010',
+        event_type: 'waypoint.reached',
+        description: 'Reached Ridge Observation Point',
+        timestamp: '2026-08-06T12:20:00.000Z',
+        metadata: { mission_id: 'luna-mission-001', waypoint_id: 'wp-ridge' },
+      },
+      {
+        event_id: 'audit-011',
+        event_type: 'science.collected',
+        description: 'Science collection completed at Ridge Observation Point',
+        timestamp: '2026-08-06T12:21:00.000Z',
+        metadata: { mission_id: 'luna-mission-001', storage_pct: 100 },
+      },
+      {
+        event_id: 'audit-012',
+        event_type: 'mission.completed',
+        description: 'Mission completed and rover returned to Base Camp',
+        timestamp: '2026-08-06T12:30:00.000Z',
+        metadata: { mission_id: 'luna-mission-001', elapsed_s: 296 },
+      },
+    ];
+
+    render(<AuditPanel events={completedEvents} />);
+    expect(screen.getByText('waypoint.reached')).toBeInTheDocument();
+    expect(screen.getByText('science.collected')).toBeInTheDocument();
+    expect(screen.getByText('mission.completed')).toBeInTheDocument();
+  });
 });

@@ -30,6 +30,7 @@ export function useMissionSocket(
   const { enabled = true, onTelemetryUpdate } = options;
   const queryClient = useQueryClient();
   const wsRef = useRef<WebSocket | null>(null);
+  const intentionalDisconnectRef = useRef(false);
   const reconnectAttemptsRef = useRef(0);
   const maxReconnectAttempts = 5;
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -46,6 +47,7 @@ export function useMissionSocket(
   const connect = useCallback(() => {
     if (!enabled) return;
 
+    intentionalDisconnectRef.current = false;
     const url = getWsUrl();
     setConnectionStatus('connecting');
 
@@ -65,10 +67,13 @@ export function useMissionSocket(
         // Handle specific event types
         switch (message.event) {
           case 'telemetry.updated':
-            // Direct telemetry update - can update UI immediately without refetch
             if (onTelemetryUpdate && message.payload) {
               onTelemetryUpdate(message.payload as TelemetrySample);
             }
+            void queryClient.invalidateQueries({
+              queryKey: missionKeys.state(),
+              refetchType: 'active',
+            });
             break;
 
           case 'mission.started':
@@ -96,6 +101,11 @@ export function useMissionSocket(
         wsRef.current = null;
       }
 
+      if (intentionalDisconnectRef.current) {
+        setConnectionStatus('disconnected');
+        return;
+      }
+
       if (reconnectAttemptsRef.current < maxReconnectAttempts && enabled) {
         setConnectionStatus('reconnecting');
         const delay = Math.min(1000 * 2 ** reconnectAttemptsRef.current, 16000);
@@ -114,6 +124,7 @@ export function useMissionSocket(
   }, [enabled, getWsUrl, queryClient, onTelemetryUpdate]);
 
   const disconnect = useCallback(() => {
+    intentionalDisconnectRef.current = true;
     if (reconnectTimeoutRef.current) {
       clearTimeout(reconnectTimeoutRef.current);
       reconnectTimeoutRef.current = null;

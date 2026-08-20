@@ -17,6 +17,11 @@ const eventTypeColors: Record<string, string> = {
   'planning.started': 'text-purple-400',
   'plans.generated': 'text-purple-400',
   'plan.approved': 'text-emerald-400',
+  'route.updated': 'text-cyan-300',
+  'waypoint.reached': 'text-cyan-400',
+  'science.collected': 'text-sky-300',
+  'anomaly.detected': 'text-orange-400',
+  'mission.completed': 'text-cyan-300',
   'mission.reset': 'text-gray-400',
 };
 

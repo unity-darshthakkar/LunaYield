@@ -19,6 +19,13 @@ export enum PlanStatus {
   APPROVED = 'APPROVED',
 }
 
+export enum WaypointProgressStatus {
+  COMPLETED = 'COMPLETED',
+  CURRENT = 'CURRENT',
+  UPCOMING = 'UPCOMING',
+  SKIPPED = 'SKIPPED',
+}
+
 // Resource models
 export interface RoverResources {
   battery_pct: number;
@@ -43,6 +50,9 @@ export interface RouteWaypoint {
   y: number;
   label: string;
   is_science_target: boolean;
+  progress_status?: WaypointProgressStatus;
+  segment_elapsed_s?: number;
+  science_collected?: boolean;
 }
 
 export interface MissionRoute {

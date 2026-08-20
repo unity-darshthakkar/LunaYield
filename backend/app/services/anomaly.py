@@ -14,6 +14,7 @@ from app.schemas import (
     AnomalyResource,
     AnomalySeverity,
 )
+from app.services.route_progress import all_science_targets_collected
 
 if TYPE_CHECKING:
     from app.services.forecasting import ForecastingService
@@ -74,12 +75,17 @@ class AnomalyDetectionService:
         mission = self._mission_service.get_mission()
         current_resources = mission.resources
         current_elapsed_s = mission.elapsed_s
+        storage_target_complete = (
+            current_resources.storage_pct >= 100.0
+            and all_science_targets_collected(mission.active_route)
+        )
 
         anomalies: list[AnomalyFinding] = []
 
         # Check current resource levels
         anomalies.extend(self._check_battery(current_resources.battery_pct))
-        anomalies.extend(self._check_storage(current_resources.storage_pct))
+        if not storage_target_complete:
+            anomalies.extend(self._check_storage(current_resources.storage_pct))
         anomalies.extend(self._check_temperature(current_resources.temperature_c))
         anomalies.extend(
             self._check_comm_window(current_resources.comm_window_remaining_s)
@@ -101,13 +107,14 @@ class AnomalyDetectionService:
                         forecast_seconds_ahead=ahead_s,
                     )
                 )
-                anomalies.extend(
-                    self._check_storage(
-                        point.resources.storage_pct,
-                        forecast=True,
-                        forecast_seconds_ahead=ahead_s,
+                if not storage_target_complete:
+                    anomalies.extend(
+                        self._check_storage(
+                            point.resources.storage_pct,
+                            forecast=True,
+                            forecast_seconds_ahead=ahead_s,
+                        )
                     )
-                )
                 anomalies.extend(
                     self._check_temperature(
                         point.resources.temperature_c,

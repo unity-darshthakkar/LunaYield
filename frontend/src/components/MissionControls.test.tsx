@@ -186,12 +186,21 @@ describe('MissionControls', () => {
   });
 
   it('Reset button is available in all states', () => {
-    const statuses: MissionStatus[] = ['IDLE', 'RUNNING', 'PAUSED', 'ANOMALY', 'AWAITING_APPROVAL', 'EXECUTING'];
+    const statuses: MissionStatus[] = ['IDLE', 'RUNNING', 'PAUSED', 'ANOMALY', 'AWAITING_APPROVAL', 'EXECUTING', 'COMPLETED'];
     statuses.forEach((status) => {
       const { unmount } = render(<MissionControls {...defaultProps} missionStatus={status} />);
       const resetBtn = screen.getByRole('button', { name: /RESET MISSION/i });
       expect(resetBtn).not.toBeDisabled();
       unmount();
     });
+  });
+  it('COMPLETED keeps pause, anomaly, and plan controls disabled while reset remains available', () => {
+    render(<MissionControls {...defaultProps} missionStatus="COMPLETED" />);
+
+    expect(screen.getByTestId('current-mission-state')).toHaveTextContent('COMPLETED');
+    expect(screen.getByRole('button', { name: /PAUSE/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /INJECT ANOMALY/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /GENERATE PLANS/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /RESET MISSION/i })).not.toBeDisabled();
   });
 });

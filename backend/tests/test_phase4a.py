@@ -20,6 +20,7 @@ def create_test_client(db_config: DatabaseConfig) -> TestClient:
     from app.main import app
 
     app.state.db_config = db_config
+    app.state.disable_background_telemetry = True
 
     client = TestClient(app)
     client.__enter__()
@@ -35,6 +36,8 @@ def close_test_client(client: TestClient):
 
         if hasattr(app.state, "db_config"):
             delattr(app.state, "db_config")
+        if hasattr(app.state, "disable_background_telemetry"):
+            delattr(app.state, "disable_background_telemetry")
 
 
 # ---------------------------------------------------------------------------

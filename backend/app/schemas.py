@@ -43,6 +43,15 @@ class PlanStatus(StrEnum):
     APPROVED = "APPROVED"
 
 
+class WaypointProgressStatus(StrEnum):
+    """Backend-authoritative progress state for a route waypoint."""
+
+    COMPLETED = "COMPLETED"
+    CURRENT = "CURRENT"
+    UPCOMING = "UPCOMING"
+    SKIPPED = "SKIPPED"
+
+
 # ---------------------------------------------------------------------------
 # Resource models
 # ---------------------------------------------------------------------------
@@ -96,6 +105,11 @@ class RouteWaypoint(BaseModel):
     y: float = Field(..., ge=0.0, le=1.0, description="Normalised y position 0–1")
     label: str
     is_science_target: bool = False
+    progress_status: WaypointProgressStatus = WaypointProgressStatus.UPCOMING
+    segment_elapsed_s: int = Field(
+        default=0, ge=0, description="Elapsed segment time for this waypoint"
+    )
+    science_collected: bool = False
 
 
 class MissionRoute(BaseModel):

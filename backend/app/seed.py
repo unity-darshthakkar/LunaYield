@@ -12,11 +12,11 @@ from datetime import UTC, datetime
 from app.schemas import (
     AuditEvent,
     Mission,
-    MissionRoute,
     MissionStatus,
     RouteWaypoint,
     RoverResources,
 )
+from app.services.route_progress import build_initialized_route
 
 # ---------------------------------------------------------------------------
 # Fixed identifiers
@@ -95,7 +95,7 @@ def get_seed_mission() -> Mission:
     Calling this function multiple times always produces structurally
     identical objects (same IDs, values, and timestamps).
     """
-    route = MissionRoute(waypoints=list(_ORIGINAL_WAYPOINTS))
+    route = build_initialized_route(_ORIGINAL_WAYPOINTS)
     # Create a fresh audit trail list each time
     seed_audit = AuditEvent(
         event_id="audit-seed-001",
@@ -110,8 +110,8 @@ def get_seed_mission() -> Mission:
         status=MissionStatus.IDLE,
         elapsed_s=0,
         resources=_SEED_RESOURCES.model_copy(),
-        original_route=route,
-        active_route=MissionRoute(waypoints=list(_ORIGINAL_WAYPOINTS)),
+        original_route=route.model_copy(deep=True),
+        active_route=route.model_copy(deep=True),
         candidate_plans=[],
         anomaly_active=False,
         audit_trail=[seed_audit],

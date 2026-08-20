@@ -276,3 +276,40 @@ def test_fresh_run_after_failed_restoration_is_queryable_and_ordered(
             close_test_client(client3)
     finally:
         close_test_client(client2)
+
+
+def test_restart_restores_degraded_anomaly_battery_state(
+    isolated_db_config: DatabaseConfig,
+):
+    """Persisted anomaly runs should restore the degraded battery state cleanly."""
+    client1 = create_test_client(isolated_db_config)
+    from app.main import app
+
+    client1.post("/api/mission/start")
+    telemetry_service = app.state.telemetry_service
+    for _ in range(30):
+        telemetry_service.generate_sample()
+
+    mission_before = client1.get("/api/mission/state").json()
+    assert mission_before["resources"]["battery_pct"] == 85.0
+
+    client1.post("/api/mission/inject-anomaly")
+    mission_after = client1.get("/api/mission/state").json()
+    run_id = client1.app.state.persistence_service.current_run_id
+    assert mission_after["status"] == "ANOMALY"
+    assert mission_after["resources"]["battery_pct"] == 80.0
+    close_test_client(client1)
+
+    client2 = create_test_client(isolated_db_config)
+    try:
+        restored = client2.get("/api/mission/state")
+        assert restored.status_code == status.HTTP_200_OK
+        data = restored.json()
+        assert client2.app.state.persistence_service.current_run_id == run_id
+        assert data["status"] == "ANOMALY"
+        assert data["resources"]["battery_pct"] == 80.0
+        assert any(
+            event["event_type"] == "battery.degraded" for event in data["audit_trail"]
+        )
+    finally:
+        close_test_client(client2)

@@ -58,3 +58,5 @@ test-results/
 
 # Python package metadata
 *.egg-info/
+
+.tmp/
