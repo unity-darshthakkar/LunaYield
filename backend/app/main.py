@@ -4,9 +4,13 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 from contextlib import asynccontextmanager
+from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from app.db import (
     DatabaseConfig,
@@ -367,6 +371,46 @@ async def lifespan(app: FastAPI):
     engine.dispose()
 
 
+def _configure_frontend(application: FastAPI) -> None:
+    """Serve the built React frontend when enabled for production deployment."""
+    if os.getenv("SERVE_FRONTEND", "").lower() != "true":
+        return
+
+    project_root = Path(__file__).resolve().parents[2]
+    frontend_dist = project_root / "frontend" / "dist"
+
+    if not frontend_dist.is_dir():
+        raise RuntimeError(
+            f"SERVE_FRONTEND=true but frontend build was not found at {frontend_dist}"
+        )
+
+    assets_dir = frontend_dist / "assets"
+    if assets_dir.is_dir():
+        application.mount(
+            "/assets",
+            StaticFiles(directory=assets_dir),
+            name="frontend-assets",
+        )
+
+    @application.get("/{full_path:path}", include_in_schema=False)
+    async def serve_frontend(full_path: str):
+        # Preserve proper 404 behavior for unknown API endpoints.
+        if full_path == "api" or full_path.startswith("api/"):
+            raise HTTPException(status_code=404, detail="Not Found")
+
+        requested_file = (frontend_dist / full_path).resolve()
+
+        if (
+            full_path
+            and requested_file.is_relative_to(frontend_dist.resolve())
+            and requested_file.is_file()
+        ):
+            return FileResponse(requested_file)
+
+        # React Router handles /, /problem-solution, /mission-control, /tech, etc.
+        return FileResponse(frontend_dist / "index.html")
+
+
 def create_app() -> FastAPI:
     application = FastAPI(
         title="LunaYield Mission Lab",
@@ -385,6 +429,9 @@ def create_app() -> FastAPI:
     application.include_router(strategy.router)
     application.include_router(validation.router)
     application.include_router(approval.router)
+
+    _configure_frontend(application)
+
     return application
 
 
