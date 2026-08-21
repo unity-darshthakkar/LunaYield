@@ -1,4 +1,4 @@
-/** Mission controls with state-aware buttons */
+﻿/** Mission controls with state-aware buttons */
 
 import type { MissionStatus } from '../types/mission';
 import { clsx } from 'clsx';
@@ -90,7 +90,8 @@ export function MissionControls({
   const isCompleted = missionStatus === 'COMPLETED';
   const canPause = isRunning;
   const canResume = isPaused;
-  const canManagePlans = isAnomaly;
+  const hasPendingPlans = candidatePlansCount > 0 && !approvedPlanLabel;
+  const canManagePlans = isAnomaly || hasPendingPlans;
   const planButtonLabel = approvedPlanLabel
     ? `PLAN SELECTED: ${approvedPlanLabel.toUpperCase()}`
     : candidatePlansCount > 0
@@ -106,9 +107,9 @@ export function MissionControls({
           ? 'text-yellow-300'
           : isCompleted
             ? 'text-cyan-300'
-          : isRunning
-            ? 'text-green-300'
-            : 'text-white';
+            : isRunning
+              ? 'text-green-300'
+              : 'text-white';
 
   const hasError =
     startError ||

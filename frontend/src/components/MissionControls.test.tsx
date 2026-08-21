@@ -1,4 +1,4 @@
-/** MissionControls component tests */
+﻿/** MissionControls component tests */
 
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
@@ -118,14 +118,13 @@ describe('MissionControls', () => {
     expect(screen.getByText(/Review and approve/i)).toBeInTheDocument();
   });
 
-  it('AWAITING_APPROVAL disables all controls except reset', () => {
+  it('AWAITING_APPROVAL enables VIEW PLANS while keeping other controls disabled', () => {
     render(
       <MissionControls
         {...defaultProps}
         missionStatus="AWAITING_APPROVAL"
         anomalyActive={true}
         candidatePlansCount={3}
-        approvedPlanLabel="Extended Survey"
       />
     );
 
@@ -133,7 +132,7 @@ describe('MissionControls', () => {
     expect(screen.getByRole('button', { name: /PAUSE/i })).toBeDisabled();
     expect(screen.getByRole('button', { name: /RESUME/i })).toBeDisabled();
     expect(screen.getByRole('button', { name: /INJECT ANOMALY/i })).toBeDisabled();
-    expect(screen.getByRole('button', { name: /PLAN SELECTED: EXTENDED SURVEY/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /VIEW PLANS/i })).not.toBeDisabled();
     expect(screen.getByRole('button', { name: /RESET MISSION/i })).not.toBeDisabled();
   });
 
@@ -194,6 +193,7 @@ describe('MissionControls', () => {
       unmount();
     });
   });
+
   it('COMPLETED keeps pause, anomaly, and plan controls disabled while reset remains available', () => {
     render(<MissionControls {...defaultProps} missionStatus="COMPLETED" />);
 
@@ -202,5 +202,18 @@ describe('MissionControls', () => {
     expect(screen.getByRole('button', { name: /INJECT ANOMALY/i })).toBeDisabled();
     expect(screen.getByRole('button', { name: /GENERATE PLANS/i })).toBeDisabled();
     expect(screen.getByRole('button', { name: /RESET MISSION/i })).not.toBeDisabled();
+  });
+
+  it('shows PLAN SELECTED label as disabled once a plan is approved', () => {
+    render(
+      <MissionControls
+        {...defaultProps}
+        missionStatus="EXECUTING"
+        candidatePlansCount={3}
+        approvedPlanLabel="Extended Survey"
+      />
+    );
+
+    expect(screen.getByRole('button', { name: /PLAN SELECTED: EXTENDED SURVEY/i })).toBeDisabled();
   });
 });

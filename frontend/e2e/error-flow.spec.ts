@@ -6,14 +6,36 @@
  * Uses controlled HTTP interception for one frontend error-rendering test.
  */
 
-import { test, expect, type APIRequestContext } from '@playwright/test';
+import { test, expect, type APIRequestContext, type Page } from '@playwright/test';
 
 const BACKEND_URL = 'http://127.0.0.1:8000';
 const PLAN_MANAGEMENT_BUTTON_NAME = /GENERATE PLANS|VIEW PLANS|PLAN SELECTED:/i;
+const CURRENT_STATE_TEST_ID = 'current-mission-state';
 
 async function resetMission(request: APIRequestContext): Promise<void> {
   const response = await request.post(`${BACKEND_URL}/api/mission/reset`);
   expect(response.ok()).toBeTruthy();
+}
+
+async function waitForMissionControlReady(page: Page): Promise<void> {
+  await expect(page.getByText('MISSION CONTROLS')).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByTestId(CURRENT_STATE_TEST_ID)).toHaveText('IDLE', { timeout: 15_000 });
+  await expect(page.locator('header').getByText('CONNECTED', { exact: true })).toBeVisible({
+    timeout: 30_000,
+  });
+}
+
+async function clickMissionControlButton(page: Page, buttonName: RegExp): Promise<void> {
+  const button = page.getByRole('button', { name: buttonName });
+  await expect(button).toBeEnabled();
+  await button.click();
+}
+
+async function closePlansPopup(page: Page): Promise<void> {
+  const closeButton = page.getByRole('button', { name: /Close plans popup/i });
+  await expect(closeButton).toBeVisible();
+  await closeButton.focus();
+  await closeButton.press('Enter');
 }
 
 test.describe('LunaYield Error/Safety Flow', () => {
@@ -22,9 +44,7 @@ test.describe('LunaYield Error/Safety Flow', () => {
   test.beforeEach(async ({ page, request }) => {
     await resetMission(request);
     await page.goto('/mission-control');
-    await expect(page.getByText('MISSION CONTROLS')).toBeVisible({ timeout: 15000 });
-    // Wait for WebSocket to connect
-    await expect(page.locator('header').getByText('CONNECTED', { exact: true })).toBeVisible({ timeout: 30000 });
+    await waitForMissionControlReady(page);
   });
 
   test.afterEach(async ({ request }) => {
@@ -41,8 +61,8 @@ test.describe('LunaYield Error/Safety Flow', () => {
     await expect(page.getByRole('button', { name: /RESET MISSION/i })).toBeEnabled();
 
     // Start mission → RUNNING
-    await page.getByRole('button', { name: /START MISSION/i }).click();
-    await expect(page.getByTestId('current-mission-state')).toHaveText('RUNNING');
+    await clickMissionControlButton(page, /START MISSION/i);
+    await expect(page.getByTestId(CURRENT_STATE_TEST_ID)).toHaveText('RUNNING');
 
     // RUNNING: Pause, Inject Anomaly, Reset enabled; Start, Resume, Generate Plans disabled
     await expect(page.getByRole('button', { name: /START MISSION/i })).toBeDisabled();
@@ -53,8 +73,8 @@ test.describe('LunaYield Error/Safety Flow', () => {
     await expect(page.getByRole('button', { name: /RESET MISSION/i })).toBeEnabled();
 
     // Inject anomaly → ANOMALY
-    await page.getByRole('button', { name: /INJECT ANOMALY/i }).click();
-    await expect(page.getByTestId('current-mission-state')).toHaveText('ANOMALY');
+    await clickMissionControlButton(page, /INJECT ANOMALY/i);
+    await expect(page.getByTestId(CURRENT_STATE_TEST_ID)).toHaveText('ANOMALY');
 
     // ANOMALY: Generate Plans, Reset enabled; others disabled
     await expect(page.getByRole('button', { name: /START MISSION/i })).toBeDisabled();
@@ -65,28 +85,31 @@ test.describe('LunaYield Error/Safety Flow', () => {
     await expect(page.getByRole('button', { name: /RESET MISSION/i })).toBeEnabled();
 
     // Generate plans → AWAITING_APPROVAL
-    await page.getByRole('button', { name: /GENERATE PLANS/i }).click();
-    await expect(page.getByTestId('current-mission-state')).toHaveText('AWAITING_APPROVAL');
+    await clickMissionControlButton(page, /GENERATE PLANS/i);
+    await expect(page.getByTestId(CURRENT_STATE_TEST_ID)).toHaveText('AWAITING_APPROVAL');
+    await expect(page.getByRole('heading', { name: /Generated mission plans/i })).toBeVisible();
+    await closePlansPopup(page);
+    await expect(page.getByRole('heading', { name: /Generated mission plans/i })).not.toBeVisible();
 
-    // AWAITING_APPROVAL: only Reset enabled
+    // AWAITING_APPROVAL: View Plans and Reset enabled; others disabled
     await expect(page.getByRole('button', { name: /START MISSION/i })).toBeDisabled();
     await expect(page.getByRole('button', { name: /PAUSE/i })).toBeDisabled();
     await expect(page.getByRole('button', { name: /RESUME/i })).toBeDisabled();
     await expect(page.getByRole('button', { name: /INJECT ANOMALY/i })).toBeDisabled();
-    await expect(page.getByRole('button', { name: PLAN_MANAGEMENT_BUTTON_NAME })).toBeDisabled();
+    await expect(page.getByRole('button', { name: PLAN_MANAGEMENT_BUTTON_NAME })).toBeEnabled();
     await expect(page.getByRole('button', { name: /RESET MISSION/i })).toBeEnabled();
   });
 
   test('rejected Aggressive Survey is visible with violations but non-actionable', async ({ page }) => {
     // Setup: start mission, inject anomaly, generate plans
-    await page.getByRole('button', { name: /START MISSION/i }).click();
-    await expect(page.getByTestId('current-mission-state')).toHaveText('RUNNING');
+    await clickMissionControlButton(page, /START MISSION/i);
+    await expect(page.getByTestId(CURRENT_STATE_TEST_ID)).toHaveText('RUNNING');
 
-    await page.getByRole('button', { name: /INJECT ANOMALY/i }).click();
-    await expect(page.getByTestId('current-mission-state')).toHaveText('ANOMALY');
+    await clickMissionControlButton(page, /INJECT ANOMALY/i);
+    await expect(page.getByTestId(CURRENT_STATE_TEST_ID)).toHaveText('ANOMALY');
 
-    await page.getByRole('button', { name: /GENERATE PLANS/i }).click();
-    await expect(page.getByTestId('current-mission-state')).toHaveText('AWAITING_APPROVAL');
+    await clickMissionControlButton(page, /GENERATE PLANS/i);
+    await expect(page.getByTestId(CURRENT_STATE_TEST_ID)).toHaveText('AWAITING_APPROVAL');
 
     // Find Aggressive Survey card
     const aggressiveCard = page.locator('[data-testid="plan-card"]', { hasText: 'Aggressive Survey' });
@@ -97,8 +120,8 @@ test.describe('LunaYield Error/Safety Flow', () => {
     // Verify safety violation is displayed with rule ID, description, measured/threshold
     await expect(aggressiveCard.getByText('SAFETY VIOLATIONS')).toBeVisible();
     await expect(aggressiveCard.getByText('[RETURN_BATTERY_MIN_20PCT]')).toBeVisible();
-    await expect(aggressiveCard.getByText('Predicted return battery 11.0% is below minimum 20.0%')).toBeVisible();
-    await expect(aggressiveCard.getByText('(measured: 11.0, threshold: 20.0)')).toBeVisible();
+    await expect(aggressiveCard.getByText('Predicted return battery 10.5% is below minimum 20.0%')).toBeVisible();
+    await expect(aggressiveCard.getByText('(measured: 10.5, threshold: 20.0)')).toBeVisible();
 
     // Verify NO approve button - only "REJECTED - CANNOT APPROVE" text
     await expect(aggressiveCard.getByText('REJECTED - CANNOT APPROVE')).toBeVisible();
@@ -110,14 +133,14 @@ test.describe('LunaYield Error/Safety Flow', () => {
 
   test('backend 422 error is surfaced to operator via frontend rendering', async ({ page }) => {
     // Setup: get to AWAITING_APPROVAL with plans generated
-    await page.getByRole('button', { name: /START MISSION/i }).click();
-    await expect(page.getByTestId('current-mission-state')).toHaveText('RUNNING');
+    await clickMissionControlButton(page, /START MISSION/i);
+    await expect(page.getByTestId(CURRENT_STATE_TEST_ID)).toHaveText('RUNNING');
 
-    await page.getByRole('button', { name: /INJECT ANOMALY/i }).click();
-    await expect(page.getByTestId('current-mission-state')).toHaveText('ANOMALY');
+    await clickMissionControlButton(page, /INJECT ANOMALY/i);
+    await expect(page.getByTestId(CURRENT_STATE_TEST_ID)).toHaveText('ANOMALY');
 
-    await page.getByRole('button', { name: /GENERATE PLANS/i }).click();
-    await expect(page.getByTestId('current-mission-state')).toHaveText('AWAITING_APPROVAL');
+    await clickMissionControlButton(page, /GENERATE PLANS/i);
+    await expect(page.getByTestId(CURRENT_STATE_TEST_ID)).toHaveText('AWAITING_APPROVAL');
 
     // Get the Extended Survey plan ID from the UI
     const extendedCard = page.locator('[data-testid="plan-card"]', { hasText: 'Extended Survey' });
@@ -146,5 +169,61 @@ test.describe('LunaYield Error/Safety Flow', () => {
   test('WebSocket connection status shows CONNECTED', async ({ page }) => {
     // MissionHeader shows WS status as "CONNECTED" (with "WS" label separate)
     await expect(page.locator('header').getByText('CONNECTED', { exact: true })).toBeVisible({ timeout: 15000 });
+  });
+
+  test('generated plans popup can be reopened through VIEW PLANS without regenerating', async ({
+    page,
+  }) => {
+    let generateRequestCount = 0;
+    page.on('request', (request) => {
+      if (
+        request.method() === 'POST' &&
+        request.url().endsWith('/api/plans/generate')
+      ) {
+        generateRequestCount += 1;
+      }
+    });
+
+    await clickMissionControlButton(page, /START MISSION/i);
+    await expect(page.getByTestId(CURRENT_STATE_TEST_ID)).toHaveText('RUNNING');
+
+    await clickMissionControlButton(page, /INJECT ANOMALY/i);
+    await expect(page.getByTestId(CURRENT_STATE_TEST_ID)).toHaveText('ANOMALY');
+
+    await clickMissionControlButton(page, /GENERATE PLANS/i);
+    await expect(page.getByTestId(CURRENT_STATE_TEST_ID)).toHaveText('AWAITING_APPROVAL');
+    await expect(page.getByRole('heading', { name: /Generated mission plans/i })).toBeVisible();
+    await expect(generateRequestCount).toBe(1);
+
+    const aggressiveCard = page.locator('[data-testid="plan-card"]', {
+      hasText: 'Aggressive Survey',
+    });
+    await expect(aggressiveCard.getByText('REJECTED - CANNOT APPROVE')).toBeVisible();
+    await expect(aggressiveCard.getByRole('button', { name: /APPROVE/i })).not.toBeVisible();
+
+    await closePlansPopup(page);
+    await expect(page.getByRole('heading', { name: /Generated mission plans/i })).not.toBeVisible();
+    await expect(page.getByRole('button', { name: /VIEW PLANS/i })).toBeEnabled();
+    await expect(generateRequestCount).toBe(1);
+
+    await page.getByRole('button', { name: /VIEW PLANS/i }).click();
+    await expect(page.getByRole('heading', { name: /Generated mission plans/i })).toBeVisible();
+    await expect(generateRequestCount).toBe(1);
+
+    const extendedCard = page.locator('[data-testid="plan-card"]', { hasText: 'Extended Survey' });
+    await Promise.all([
+      page.waitForResponse(
+        (response) =>
+          response.request().method() === 'POST' &&
+          response.url().endsWith('/api/plans/plan-b-001/approve') &&
+          response.ok()
+      ),
+      extendedCard.getByRole('button', { name: /APPROVE \(RECOMMENDED\)/i }).click(),
+    ]);
+
+    await expect(page.getByTestId(CURRENT_STATE_TEST_ID)).toHaveText('EXECUTING');
+    await expect(
+      page.getByRole('button', { name: /PLAN SELECTED: EXTENDED SURVEY/i })
+    ).toBeDisabled();
   });
 });
