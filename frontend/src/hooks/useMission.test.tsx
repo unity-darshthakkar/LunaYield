@@ -604,21 +604,21 @@ describe('useMission hooks', () => {
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-      // Should invalidate queries with prefix ['mission', 'strategies']
+      // Should invalidate queries with prefix ['mission', sessionId, 'strategies']
       const strategyInvalidated = invalidatedKeys.some(key =>
-        Array.isArray(key) && key[0] === 'mission' && key[1] === 'strategies'
+        Array.isArray(key) && key[0] === 'mission' && key[2] === 'strategies'
       );
       expect(strategyInvalidated).toBe(true);
 
-      // Should invalidate queries with prefix ['mission', 'validation']
+      // Should invalidate queries with prefix ['mission', sessionId, 'validation']
       const validationInvalidated = invalidatedKeys.some(key =>
-        Array.isArray(key) && key[0] === 'mission' && key[1] === 'validation'
+        Array.isArray(key) && key[0] === 'mission' && key[2] === 'validation'
       );
       expect(validationInvalidated).toBe(true);
 
       // Should NOT invalidate mission state
       const missionStateInvalidated = invalidatedKeys.some(key =>
-        Array.isArray(key) && key[0] === 'mission' && key[1] === 'state'
+        Array.isArray(key) && key[0] === 'mission' && key[2] === 'state'
       );
       expect(missionStateInvalidated).toBe(false);
     });

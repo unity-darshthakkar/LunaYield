@@ -5,14 +5,9 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException, Query, Request
 
 from app.schemas import AnomalyDetectionResponse
-from app.services.anomaly import AnomalyDetectionService
+from app.session_manager import get_session_context_from_request
 
 router = APIRouter(prefix="/api", tags=["anomaly"])
-
-
-def _get_anomaly_service(request: Request) -> AnomalyDetectionService:
-    """Get AnomalyDetectionService from app state."""
-    return request.app.state.anomaly_service
 
 
 @router.get("/anomalies", response_model=AnomalyDetectionResponse)
@@ -35,9 +30,9 @@ async def detect_anomalies(
 
     Supports checking both current state and optionally forecasted future state.
     """
-    anomaly_service = _get_anomaly_service(request)
+    session_context = get_session_context_from_request(request)
     try:
-        return anomaly_service.detect_anomalies(
+        return session_context.anomaly_service.detect_anomalies(
             use_forecast=use_forecast, forecast_horizon_s=forecast_horizon
         )
     except ValueError as e:

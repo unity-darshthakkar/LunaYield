@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import type { TelemetrySample } from '../types/mission';
 import type { WSMessage } from '../api/mission';
+import { getDemoSessionId } from '../lib/demoSession';
 import { missionKeys } from './useMission';
 
 type ConnectionStatus = 'connecting' | 'connected' | 'disconnected' | 'reconnecting';
@@ -29,6 +30,7 @@ export function useMissionSocket(
 ): UseMissionSocketReturn {
   const { enabled = true, onTelemetryUpdate } = options;
   const queryClient = useQueryClient();
+  const sessionId = getDemoSessionId();
   const wsRef = useRef<WebSocket | null>(null);
   const intentionalDisconnectRef = useRef(false);
   const reconnectAttemptsRef = useRef(0);
@@ -41,8 +43,9 @@ export function useMissionSocket(
   // Derive WebSocket URL from current page location
   const getWsUrl = useCallback((): string => {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    return `${protocol}//${window.location.host}/api/ws/mission`;
-  }, []);
+    const encodedSessionId = encodeURIComponent(sessionId);
+    return `${protocol}//${window.location.host}/api/ws/mission?session_id=${encodedSessionId}`;
+  }, [sessionId]);
 
   const connect = useCallback(() => {
     if (!enabled) return;
@@ -71,7 +74,7 @@ export function useMissionSocket(
               onTelemetryUpdate(message.payload as TelemetrySample);
             }
             void queryClient.invalidateQueries({
-              queryKey: missionKeys.state(),
+              queryKey: missionKeys.state(sessionId),
               refetchType: 'active',
             });
             break;
@@ -84,12 +87,12 @@ export function useMissionSocket(
           case 'plan.approved':
           case 'mission.reset':
             // Invalidate mission state to refetch authoritative data
-            queryClient.invalidateQueries({ queryKey: missionKeys.state() });
+            queryClient.invalidateQueries({ queryKey: missionKeys.state(sessionId) });
             break;
 
           default:
             // Unknown event - still invalidate to be safe
-            queryClient.invalidateQueries({ queryKey: missionKeys.state() });
+            queryClient.invalidateQueries({ queryKey: missionKeys.state(sessionId) });
         }
       } catch {
         // Ignore parse errors
@@ -121,7 +124,7 @@ export function useMissionSocket(
     ws.onerror = () => {
       // Error will be followed by onclose
     };
-  }, [enabled, getWsUrl, queryClient, onTelemetryUpdate]);
+  }, [enabled, getWsUrl, queryClient, onTelemetryUpdate, sessionId]);
 
   const disconnect = useCallback(() => {
     intentionalDisconnectRef.current = true;

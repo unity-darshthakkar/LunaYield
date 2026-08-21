@@ -464,3 +464,55 @@ Implemented the final mission-logic change for the judge-facing anomaly story. T
 - Full backend suite: 326 passed
 - Frontend not rerun in this pass because no frontend code or API schema changed
 - Playwright not run in this environment
+
+## Phase 6E - Per-Tab Demo Session Isolation
+
+**Branch**: current final-demo/submission working tree
+
+### Summary
+Implemented lightweight demo-session isolation so each browser tab now controls its own authoritative LunaYield mission without redesigning the UI or changing deterministic mission logic. Session identity is generated in the frontend with `sessionStorage`, propagated through every mission API request and mission WebSocket connection, and resolved in the backend to a lazily created `SessionContext` that owns session-local mission, telemetry, persistence, forecasting, anomaly, strategy, validation, and approval services.
+
+### Key Deliverables
+- Added a frontend demo-session utility backed by `sessionStorage` with the key `lunayield_demo_session_id`
+- Injected `X-Demo-Session-Id` onto shared Axios requests so all mission APIs resolve the correct session without duplicating client logic
+- Scoped the mission WebSocket connection to `/api/ws/mission?session_id=<uuid>` and invalidated only that session's mission-state query on live updates
+- Made mission-related TanStack Query keys session-aware to prevent stale cross-session cache reuse
+- Added backend `SessionManager` / `SessionContext` orchestration with lazy mission seeding, per-session persistence instances, last-access tracking, and TTL cleanup
+- Replaced mission-router usage of global mission-state services with centralized session-context resolution for reads and writes
+- Updated telemetry broadcasting to iterate active session contexts so concurrent RUNNING sessions progress independently
+- Bucketed WebSocket connections by session ID so mission, telemetry, plan, and reset events broadcast only to the relevant session
+- Added backend regression coverage for session isolation and WebSocket scoping, frontend tests for session identity/header/socket behavior, and a Playwright two-context isolation flow
+
+### Files Updated
+- `backend/app/main.py`
+- `backend/app/routers/anomaly.py`
+- `backend/app/routers/approval.py`
+- `backend/app/routers/forecasting.py`
+- `backend/app/routers/mission.py`
+- `backend/app/routers/planning.py`
+- `backend/app/routers/strategy.py`
+- `backend/app/routers/validation.py`
+- `backend/app/routers/ws.py`
+- `backend/app/session_manager.py` (new)
+- `backend/app/ws_manager.py`
+- `backend/tests/test_demo_session_isolation.py` (new)
+- `backend/tests/test_ws_schemas.py`
+- `frontend/e2e/session-isolation.spec.ts` (new)
+- `frontend/src/api/client.test.ts` (new)
+- `frontend/src/api/client.ts`
+- `frontend/src/api/mission.test.ts`
+- `frontend/src/hooks/useMission.test.tsx`
+- `frontend/src/hooks/useMission.ts`
+- `frontend/src/hooks/useMissionSocket.test.tsx`
+- `frontend/src/hooks/useMissionSocket.ts`
+- `frontend/src/lib/demoSession.test.ts` (new)
+- `frontend/src/lib/demoSession.ts` (new)
+
+### Validation
+- Backend Ruff: passed
+- Backend format check: passed
+- Full backend suite: 335 passed
+- Full frontend Vitest: 197 passed
+- Frontend lint: passed
+- Frontend build: passed
+- Playwright launched and executed the listed safety, mission-flow, and new session-isolation specs in this environment, but the process hung during teardown before emitting a final summary

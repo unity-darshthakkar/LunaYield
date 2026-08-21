@@ -5,14 +5,9 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException, Query, Request
 
 from app.schemas import MissionForecastResponse
-from app.services.forecasting import ForecastingService
+from app.session_manager import get_session_context_from_request
 
 router = APIRouter(prefix="/api", tags=["forecasting"])
-
-
-def _get_forecasting_service(request: Request) -> ForecastingService:
-    """Get ForecastingService from app state."""
-    return request.app.state.forecasting_service
 
 
 @router.get("/forecast", response_model=MissionForecastResponse)
@@ -33,9 +28,9 @@ async def get_resource_forecast(
     Uses deterministic calculations based on current mission state and
     historical consumption patterns. Does not mutate mission state.
     """
-    forecasting_service = _get_forecasting_service(request)
+    session_context = get_session_context_from_request(request)
     try:
-        return forecasting_service.generate_forecast(
+        return session_context.forecasting_service.generate_forecast(
             forecast_horizon_s=horizon, forecast_tick_interval_s=interval
         )
     except ValueError as e:

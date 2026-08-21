@@ -1,6 +1,7 @@
 /** Axios instance configured for LunaYield API */
 
 import axios from 'axios';
+import { getDemoSessionId } from '../lib/demoSession';
 
 export const apiClient = axios.create({
   baseURL: '/api',
@@ -8,6 +9,12 @@ export const apiClient = axios.create({
     'Content-Type': 'application/json',
   },
   timeout: 10000,
+});
+
+apiClient.interceptors.request.use((config) => {
+  config.headers = config.headers ?? {};
+  config.headers['X-Demo-Session-Id'] = getDemoSessionId();
+  return config;
 });
 
 // Response interceptor to normalize error shape

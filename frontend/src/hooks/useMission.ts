@@ -28,20 +28,31 @@ import {
   type AnomalyParams,
   type StrategyParams,
 } from '../api/mission';
+import { getDemoSessionId } from '../lib/demoSession';
 
 // Query keys
 export const missionKeys = {
-  all: ['mission'] as const,
-  state: () => [...missionKeys.all, 'state'] as const,
-  scenario: () => ['scenario'] as const,
-  forecast: (params?: ForecastParams) =>
-    [...missionKeys.all, 'forecast', params] as const,
-  anomalies: (params?: AnomalyParams) =>
-    [...missionKeys.all, 'anomalies', params] as const,
-  strategies: (params?: StrategyParams) =>
-    [...missionKeys.all, 'strategies', params] as const,
-  validation: (params?: StrategyParams) =>
-    [...missionKeys.all, 'validation', params] as const,
+  all: (sessionId: string = getDemoSessionId()) => ['mission', sessionId] as const,
+  state: (sessionId: string = getDemoSessionId()) =>
+    [...missionKeys.all(sessionId), 'state'] as const,
+  scenario: (sessionId: string = getDemoSessionId()) =>
+    ['scenario', sessionId] as const,
+  forecast: (
+    params?: ForecastParams,
+    sessionId: string = getDemoSessionId()
+  ) => [...missionKeys.all(sessionId), 'forecast', params] as const,
+  anomalies: (
+    params?: AnomalyParams,
+    sessionId: string = getDemoSessionId()
+  ) => [...missionKeys.all(sessionId), 'anomalies', params] as const,
+  strategies: (
+    params?: StrategyParams,
+    sessionId: string = getDemoSessionId()
+  ) => [...missionKeys.all(sessionId), 'strategies', params] as const,
+  validation: (
+    params?: StrategyParams,
+    sessionId: string = getDemoSessionId()
+  ) => [...missionKeys.all(sessionId), 'validation', params] as const,
 };
 
 // Query hooks
@@ -49,8 +60,9 @@ export const missionKeys = {
 export function useMissionState(
   options?: UseQueryOptions<Mission, Error, Mission, typeof missionKeys.state>
 ) {
+  const sessionId = getDemoSessionId();
   return useQuery({
-    queryKey: missionKeys.state(),
+    queryKey: missionKeys.state(sessionId),
     queryFn: getMissionState,
     staleTime: 1000, // Short stale time for near-live feel
     refetchOnWindowFocus: false,
@@ -61,8 +73,9 @@ export function useMissionState(
 export function useScenario(
   options?: UseQueryOptions<ScenarioResponse, Error, ScenarioResponse, typeof missionKeys.scenario>
 ) {
+  const sessionId = getDemoSessionId();
   return useQuery({
-    queryKey: missionKeys.scenario(),
+    queryKey: missionKeys.scenario(sessionId),
     queryFn: getScenario,
     staleTime: Infinity, // Scenario never changes
     ...options,
@@ -73,8 +86,9 @@ export function useForecast(
   params?: ForecastParams,
   options?: UseQueryOptions<MissionForecastResponse, Error, MissionForecastResponse, ReturnType<typeof missionKeys.forecast>>
 ) {
+  const sessionId = getDemoSessionId();
   return useQuery({
-    queryKey: missionKeys.forecast(params),
+    queryKey: missionKeys.forecast(params, sessionId),
     queryFn: () => getForecast(params),
     staleTime: 2000, // Forecast updates periodically
     refetchOnWindowFocus: false,
@@ -86,8 +100,9 @@ export function useAnomalies(
   params?: AnomalyParams,
   options?: UseQueryOptions<AnomalyDetectionResponse, Error, AnomalyDetectionResponse, ReturnType<typeof missionKeys.anomalies>>
 ) {
+  const sessionId = getDemoSessionId();
   return useQuery({
-    queryKey: missionKeys.anomalies(params),
+    queryKey: missionKeys.anomalies(params, sessionId),
     queryFn: () => getAnomalies(params),
     staleTime: 2000, // Anomalies update periodically
     refetchOnWindowFocus: false,
@@ -99,8 +114,9 @@ export function useStrategies(
   params?: StrategyParams,
   options?: UseQueryOptions<StrategyGenerationResponse, Error, StrategyGenerationResponse, ReturnType<typeof missionKeys.strategies>>
 ) {
+  const sessionId = getDemoSessionId();
   return useQuery({
-    queryKey: missionKeys.strategies(params),
+    queryKey: missionKeys.strategies(params, sessionId),
     queryFn: () => getStrategies(params),
     staleTime: 2000, // Strategies update periodically
     refetchOnWindowFocus: false,
@@ -113,8 +129,9 @@ export function useValidateStrategies(
   params?: StrategyParams,
   options?: UseQueryOptions<StrategyValidationResponse, Error, StrategyValidationResponse, ReturnType<typeof missionKeys.validation>>
 ) {
+  const sessionId = getDemoSessionId();
   return useQuery({
-    queryKey: missionKeys.validation(params),
+    queryKey: missionKeys.validation(params, sessionId),
     queryFn: () => validateStrategies(params),
     staleTime: 2000, // Validation updates periodically
     refetchOnWindowFocus: false,
@@ -126,14 +143,19 @@ export function useValidateStrategies(
 export function useApproveStrategy(
   options?: UseMutationOptions<StrategyApprovalResult, Error, { strategyId: string; params?: StrategyParams }, unknown>
 ) {
+  const sessionId = getDemoSessionId();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ strategyId, params }) => approveStrategy(strategyId, params),
     onSuccess: () => {
       // Invalidate all strategy queries regardless of forecast params
-      queryClient.invalidateQueries({ queryKey: ['mission', 'strategies'] });
+      queryClient.invalidateQueries({
+        queryKey: [...missionKeys.all(sessionId), 'strategies'],
+      });
       // Invalidate all validation queries regardless of forecast params
-      queryClient.invalidateQueries({ queryKey: ['mission', 'validation'] });
+      queryClient.invalidateQueries({
+        queryKey: [...missionKeys.all(sessionId), 'validation'],
+      });
       // Strategy approval does NOT mutate mission resources/state
     },
     ...options,
@@ -145,11 +167,12 @@ export function useApproveStrategy(
 export function useStartMission(
   options?: UseMutationOptions<Mission, Error, void, unknown>
 ) {
+  const sessionId = getDemoSessionId();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: startMission,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: missionKeys.state() });
+      queryClient.invalidateQueries({ queryKey: missionKeys.state(sessionId) });
     },
     ...options,
   });
@@ -158,11 +181,12 @@ export function useStartMission(
 export function usePauseMission(
   options?: UseMutationOptions<Mission, Error, void, unknown>
 ) {
+  const sessionId = getDemoSessionId();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: pauseMission,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: missionKeys.state() });
+      queryClient.invalidateQueries({ queryKey: missionKeys.state(sessionId) });
     },
     ...options,
   });
@@ -171,11 +195,12 @@ export function usePauseMission(
 export function useResumeMission(
   options?: UseMutationOptions<Mission, Error, void, unknown>
 ) {
+  const sessionId = getDemoSessionId();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: resumeMission,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: missionKeys.state() });
+      queryClient.invalidateQueries({ queryKey: missionKeys.state(sessionId) });
     },
     ...options,
   });
@@ -184,12 +209,13 @@ export function useResumeMission(
 export function useResetMission(
   options?: UseMutationOptions<Mission, Error, void, unknown>
 ) {
+  const sessionId = getDemoSessionId();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: resetMission,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: missionKeys.state() });
-      queryClient.invalidateQueries({ queryKey: missionKeys.scenario() });
+      queryClient.invalidateQueries({ queryKey: missionKeys.state(sessionId) });
+      queryClient.invalidateQueries({ queryKey: missionKeys.scenario(sessionId) });
     },
     ...options,
   });
@@ -198,11 +224,12 @@ export function useResetMission(
 export function useInjectAnomaly(
   options?: UseMutationOptions<Mission, Error, void, unknown>
 ) {
+  const sessionId = getDemoSessionId();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: injectAnomaly,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: missionKeys.state() });
+      queryClient.invalidateQueries({ queryKey: missionKeys.state(sessionId) });
     },
     ...options,
   });
@@ -211,11 +238,12 @@ export function useInjectAnomaly(
 export function useGeneratePlans(
   options?: UseMutationOptions<CandidatePlan[], Error, void, unknown>
 ) {
+  const sessionId = getDemoSessionId();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: generatePlans,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: missionKeys.state() });
+      queryClient.invalidateQueries({ queryKey: missionKeys.state(sessionId) });
     },
     ...options,
   });
@@ -224,11 +252,12 @@ export function useGeneratePlans(
 export function useApprovePlan(
   options?: UseMutationOptions<CandidatePlan, Error, string, unknown>
 ) {
+  const sessionId = getDemoSessionId();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: approvePlan,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: missionKeys.state() });
+      queryClient.invalidateQueries({ queryKey: missionKeys.state(sessionId) });
     },
     ...options,
   });

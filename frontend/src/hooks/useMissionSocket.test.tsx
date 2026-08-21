@@ -2,6 +2,10 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+vi.mock('../lib/demoSession', () => ({
+  getDemoSessionId: () => 'socket-session-123',
+}));
+
 import { useMissionSocket } from './useMissionSocket';
 
 class MockWebSocket {
@@ -57,6 +61,9 @@ describe('useMissionSocket', () => {
     await waitFor(() => {
       expect(MockWebSocket.instances).toHaveLength(1);
     });
+    expect(MockWebSocket.instances[0].url).toContain(
+      '/api/ws/mission?session_id=socket-session-123'
+    );
 
     act(() => {
       MockWebSocket.instances[0].emitMessage({
@@ -79,7 +86,7 @@ describe('useMissionSocket', () => {
     await waitFor(() => {
       expect(onTelemetryUpdate).toHaveBeenCalledTimes(1);
       expect(invalidateQueries).toHaveBeenCalledWith({
-        queryKey: ['mission', 'state'],
+        queryKey: ['mission', 'socket-session-123', 'state'],
         refetchType: 'active',
       });
     });

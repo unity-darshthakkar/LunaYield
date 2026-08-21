@@ -109,6 +109,16 @@ class TestWSSchemas:
 class TestWSConnectionManager:
     """Test WebSocket connection manager."""
 
+    class DummyWebSocket:
+        def __init__(self) -> None:
+            self.messages: list[str] = []
+
+        async def accept(self) -> None:
+            return None
+
+        async def send_text(self, data: str) -> None:
+            self.messages.append(data)
+
     @pytest.mark.asyncio
     async def test_connect_disconnect(self) -> None:
         """Connection manager should track connections."""
@@ -121,5 +131,47 @@ class TestWSConnectionManager:
         # Test that broadcast doesn't raise when no connections
         manager = WSConnectionManager()
 
-        await manager.broadcast("test.event", {"data": "test"})
+        await manager.broadcast("session-a", "test.event", {"data": "test"})
         assert manager.connection_count == 0
+
+    @pytest.mark.asyncio
+    async def test_connection_counts_are_scoped_by_session(self) -> None:
+        """Connection counts should be tracked per session bucket."""
+        manager = WSConnectionManager()
+        session_a_socket = self.DummyWebSocket()
+        session_b_socket = self.DummyWebSocket()
+
+        await manager.connect("session-a", session_a_socket)
+        await manager.connect("session-b", session_b_socket)
+
+        assert manager.connection_count == 2
+        assert manager.connection_count_for_session("session-a") == 1
+        assert manager.connection_count_for_session("session-b") == 1
+
+    @pytest.mark.asyncio
+    async def test_broadcast_only_reaches_target_session(self) -> None:
+        """A session broadcast must not leak to other sessions."""
+        manager = WSConnectionManager()
+        session_a_socket = self.DummyWebSocket()
+        session_b_socket = self.DummyWebSocket()
+
+        await manager.connect("session-a", session_a_socket)
+        await manager.connect("session-b", session_b_socket)
+        await manager.broadcast("session-a", "mission.started", {"status": "RUNNING"})
+
+        assert len(session_a_socket.messages) == 1
+        assert session_b_socket.messages == []
+
+    @pytest.mark.asyncio
+    async def test_multiple_sockets_in_same_session_receive_same_event(self) -> None:
+        """All sockets in one session should receive that session's event."""
+        manager = WSConnectionManager()
+        session_a_socket_1 = self.DummyWebSocket()
+        session_a_socket_2 = self.DummyWebSocket()
+
+        await manager.connect("session-a", session_a_socket_1)
+        await manager.connect("session-a", session_a_socket_2)
+        await manager.broadcast("session-a", "mission.started", {"status": "RUNNING"})
+
+        assert len(session_a_socket_1.messages) == 1
+        assert len(session_a_socket_2.messages) == 1

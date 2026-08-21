@@ -10,14 +10,9 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException, Query, Request
 
 from app.schemas import StrategyApprovalResult
-from app.services.approval import StrategyApprovalService
+from app.session_manager import get_session_context_from_request
 
 router = APIRouter(prefix="/api", tags=["strategy-approval"])
-
-
-def _get_approval_service(request: Request) -> StrategyApprovalService:
-    """Get StrategyApprovalService from app state."""
-    return request.app.state.approval_service
 
 
 @router.post("/strategies/{strategy_id}/approve", response_model=StrategyApprovalResult)
@@ -40,9 +35,9 @@ async def approve_strategy(
     Strategy must exist in current generated set and pass validation.
     Does NOT execute recommended actions or mutate mission state.
     """
-    approval_service = _get_approval_service(request)
+    session_context = get_session_context_from_request(request)
     try:
-        return approval_service.approve_strategy(
+        return session_context.approval_service.approve_strategy(
             strategy_id=strategy_id,
             use_forecast=use_forecast,
             forecast_horizon_s=forecast_horizon,

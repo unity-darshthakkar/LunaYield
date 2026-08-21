@@ -6,7 +6,7 @@ from fastapi import APIRouter, HTTPException, Request
 
 from app.schemas import Mission
 from app.services.exceptions import MissionStateError
-from app.services.persistence import MissionPersistenceService
+from app.session_manager import get_session_context_from_request
 
 # Mission router - lifecycle endpoints under /api/mission
 mission_router = APIRouter(prefix="/api/mission", tags=["mission"])
@@ -15,40 +15,23 @@ mission_router = APIRouter(prefix="/api/mission", tags=["mission"])
 scenario_router = APIRouter(prefix="/api", tags=["scenario"])
 
 
-def _get_mission_service(request: Request):
-    """Get MissionService from app state."""
-    return request.app.state.mission_service
-
-
 def _get_ws_manager(request: Request):
     """Get WebSocket manager from app state."""
     return request.app.state.ws_manager
 
 
-def _get_persistence_service(request: Request) -> MissionPersistenceService:
-    """Get MissionPersistenceService from app state."""
-    return request.app.state.persistence_service
-
-
-async def _persist_after_transition(request: Request, mission: Mission) -> None:
-    """Persist snapshot and new audit events after a successful state transition."""
-    persistence_service = _get_persistence_service(request)
-    persistence_service.persist_snapshot(mission)
-    persistence_service.persist_new_audit_events(mission)
-
-
 @mission_router.get("/state", response_model=Mission)
 async def get_mission_state(request: Request) -> Mission:
     """Get current mission state."""
-    mission_service = _get_mission_service(request)
-    return mission_service.get_mission()
+    session_context = get_session_context_from_request(request)
+    return session_context.mission_service.get_mission()
 
 
 @scenario_router.get("/scenario")
 async def get_scenario(request: Request) -> dict:
     """Get mission scenario information (seed data)."""
-    mission_service = _get_mission_service(request)
-    mission = mission_service.get_mission()
+    session_context = get_session_context_from_request(request)
+    mission = session_context.mission_service.get_mission()
     return {
         "mission_id": mission.mission_id,
         "label": mission.label,
@@ -68,17 +51,19 @@ async def get_scenario(request: Request) -> dict:
 @mission_router.post("/start", response_model=Mission)
 async def start_mission(request: Request) -> Mission:
     """Start mission from IDLE to RUNNING."""
-    mission_service = _get_mission_service(request)
+    session_context = get_session_context_from_request(request)
     ws_manager = _get_ws_manager(request)
 
     try:
-        mission = mission_service.start()
+        mission = session_context.mission_service.start()
     except MissionStateError as e:
         raise HTTPException(status_code=409, detail=str(e)) from e
 
-    await _persist_after_transition(request, mission)
+    session_context.persistence_service.persist_snapshot(mission)
+    session_context.persistence_service.persist_new_audit_events(mission)
 
     await ws_manager.broadcast(
+        session_context.session_id,
         "mission.started",
         {"mission_id": mission.mission_id, "status": mission.status.value},
     )
@@ -88,17 +73,19 @@ async def start_mission(request: Request) -> Mission:
 @mission_router.post("/pause", response_model=Mission)
 async def pause_mission(request: Request) -> Mission:
     """Pause mission from RUNNING to PAUSED."""
-    mission_service = _get_mission_service(request)
+    session_context = get_session_context_from_request(request)
     ws_manager = _get_ws_manager(request)
 
     try:
-        mission = mission_service.pause()
+        mission = session_context.mission_service.pause()
     except MissionStateError as e:
         raise HTTPException(status_code=409, detail=str(e)) from e
 
-    await _persist_after_transition(request, mission)
+    session_context.persistence_service.persist_snapshot(mission)
+    session_context.persistence_service.persist_new_audit_events(mission)
 
     await ws_manager.broadcast(
+        session_context.session_id,
         "mission.paused",
         {"mission_id": mission.mission_id, "status": mission.status.value},
     )
@@ -108,17 +95,19 @@ async def pause_mission(request: Request) -> Mission:
 @mission_router.post("/resume", response_model=Mission)
 async def resume_mission(request: Request) -> Mission:
     """Resume mission from PAUSED to RUNNING."""
-    mission_service = _get_mission_service(request)
+    session_context = get_session_context_from_request(request)
     ws_manager = _get_ws_manager(request)
 
     try:
-        mission = mission_service.resume()
+        mission = session_context.mission_service.resume()
     except MissionStateError as e:
         raise HTTPException(status_code=409, detail=str(e)) from e
 
-    await _persist_after_transition(request, mission)
+    session_context.persistence_service.persist_snapshot(mission)
+    session_context.persistence_service.persist_new_audit_events(mission)
 
     await ws_manager.broadcast(
+        session_context.session_id,
         "mission.resumed",
         {"mission_id": mission.mission_id, "status": mission.status.value},
     )
@@ -131,24 +120,23 @@ async def reset_mission(request: Request) -> Mission:
 
     Ends current run and creates new run.
     """
-    mission_service = _get_mission_service(request)
+    session_context = get_session_context_from_request(request)
     ws_manager = _get_ws_manager(request)
-    telemetry_service = request.app.state.telemetry_service
-    persistence_service = _get_persistence_service(request)
 
     # Capture pre-reset status for ending the current mission run
-    pre_reset_mission = mission_service.get_mission()
+    pre_reset_mission = session_context.mission_service.get_mission()
     pre_reset_status = pre_reset_mission.status.value
 
     # Perform the reset
-    mission = mission_service.reset()
-    telemetry_service.reset_tick_count()
+    mission = session_context.mission_service.reset()
+    session_context.telemetry_service.reset_tick_count()
 
     # Persist: end old run, create new run, snapshot, audit events
-    persistence_service.mark_current_run_ended(pre_reset_status)
-    persistence_service.reset_and_create_new_run(mission)
+    session_context.persistence_service.mark_current_run_ended(pre_reset_status)
+    session_context.persistence_service.reset_and_create_new_run(mission)
 
     await ws_manager.broadcast(
+        session_context.session_id,
         "mission.reset",
         {"mission_id": mission.mission_id, "status": mission.status.value},
     )
@@ -158,17 +146,19 @@ async def reset_mission(request: Request) -> Mission:
 @mission_router.post("/inject-anomaly", response_model=Mission)
 async def inject_anomaly(request: Request) -> Mission:
     """Inject anomaly from RUNNING to ANOMALY."""
-    mission_service = _get_mission_service(request)
+    session_context = get_session_context_from_request(request)
     ws_manager = _get_ws_manager(request)
 
     try:
-        mission = mission_service.inject_anomaly()
+        mission = session_context.mission_service.inject_anomaly()
     except MissionStateError as e:
         raise HTTPException(status_code=409, detail=str(e)) from e
 
-    await _persist_after_transition(request, mission)
+    session_context.persistence_service.persist_snapshot(mission)
+    session_context.persistence_service.persist_new_audit_events(mission)
 
     await ws_manager.broadcast(
+        session_context.session_id,
         "anomaly.injected",
         {"mission_id": mission.mission_id, "status": mission.status.value},
     )

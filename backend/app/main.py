@@ -35,43 +35,38 @@ from app.routers import (
     validation,
     ws,
 )
-from app.schemas import (
-    AuditEvent,
-    Mission,
-    MissionStatus,
-)
+from app.schemas import AuditEvent, Mission, MissionStatus
 from app.seed import get_seed_mission
-from app.services.anomaly import AnomalyDetectionService
-from app.services.approval import StrategyApprovalService
-from app.services.forecasting import ForecastingService
 from app.services.mission import MissionService
-from app.services.persistence import MissionPersistenceService
 from app.services.planning import PlanningService
 from app.services.safety import SafetyVerifier
-from app.services.strategy import StrategyService
-from app.services.telemetry import TelemetryService
-from app.services.validation import StrategyValidationService
+from app.session_manager import DEFAULT_SESSION_ID, SessionManager
 from app.ws_manager import WSConnectionManager
 
 
 async def telemetry_loop(
-    telemetry_service: TelemetryService,
+    session_manager: SessionManager,
     ws_manager: WSConnectionManager,
-    persistence_service: MissionPersistenceService,
 ) -> None:
     """Background telemetry emission loop.
 
-    Runs approximately every 2 seconds while mission is RUNNING or EXECUTING.
+    Runs approximately every 2 seconds while session missions are RUNNING
+    or EXECUTING.
     """
     try:
         while True:
-            sample = telemetry_service.generate_sample()
-            if sample is not None:
-                mission = telemetry_service._mission_service.get_mission()
-                persistence_service.persist_snapshot(mission)
-                persistence_service.persist_new_audit_events(mission)
-                payload = sample.model_dump(mode="json")
-                await ws_manager.broadcast("telemetry.updated", payload)
+            for context in session_manager.list_contexts():
+                sample = context.telemetry_service.generate_sample()
+                if sample is not None:
+                    context.touch()
+                    mission = context.mission_service.get_mission()
+                    context.persistence_service.persist_snapshot(mission)
+                    context.persistence_service.persist_new_audit_events(mission)
+                    payload = sample.model_dump(mode="json")
+                    await ws_manager.broadcast(
+                        context.session_id, "telemetry.updated", payload
+                    )
+            session_manager.cleanup_expired_sessions(ws_manager)
             await asyncio.sleep(2.0)
     except asyncio.CancelledError:
         # Clean shutdown
@@ -235,43 +230,20 @@ async def lifespan(app: FastAPI):
     init_db(engine)
     session_factory = get_session_factory(engine)
 
-    mission_service = MissionService()
     planning_service = PlanningService()
     safety_verifier = SafetyVerifier()
-    telemetry_service = TelemetryService(mission_service)
-    forecasting_service = ForecastingService(mission_service)
-    anomaly_service = AnomalyDetectionService(mission_service, forecasting_service)
-    strategy_service = StrategyService(
-        mission_service, forecasting_service, anomaly_service
-    )
-    validation_service = StrategyValidationService(mission_service)
-    approval_service = StrategyApprovalService(
-        strategy_service,
-        validation_service,
-        mission_service,
-        forecasting_service,
-        anomaly_service,
-    )
     ws_manager = WSConnectionManager()
-    persistence_service = MissionPersistenceService(session_factory)
-
-    # Set up dependencies
-    mission_service.set_dependencies(safety_verifier, planning_service)
-
-    # Store in app state for router access
-    app.state.mission_service = mission_service
+    session_manager = SessionManager(
+        session_factory=session_factory,
+        safety_verifier=safety_verifier,
+        planning_service=planning_service,
+    )
+    app.state.session_manager = session_manager
+    app.state.ws_manager = ws_manager
     app.state.planning_service = planning_service
     app.state.safety_verifier = safety_verifier
-    app.state.telemetry_service = telemetry_service
-    app.state.forecasting_service = forecasting_service
-    app.state.anomaly_service = anomaly_service
-    app.state.strategy_service = strategy_service
-    app.state.validation_service = validation_service
-    app.state.approval_service = approval_service
-    app.state.ws_manager = ws_manager
     app.state.db_engine = engine
     app.state.db_session_factory = session_factory
-    app.state.persistence_service = persistence_service
 
     # STARTUP RESTORATION FLOW
     # 1. Get seed mission (deterministic structural baseline)
@@ -338,29 +310,36 @@ async def lifespan(app: FastAPI):
             unfinished_run = None
 
         if unfinished_run is not None:
-            # 3g. Load restored mission into MissionService via public API
-            # At this point, restored_mission is guaranteed to be valid
-            mission_service.restore(restored_mission)
-
-            # 3h. Attach persistence service to existing run
-            persistence_service.restore_current_run(
-                run_id, restored_mission, latest_snapshot, audit_records
+            default_context = session_manager.create_context(
+                DEFAULT_SESSION_ID,
+                restored_mission=restored_mission,
+                restored_run_id=run_id,
+                restored_snapshot=latest_snapshot,
+                restored_audit_records=audit_records,
             )
         else:
             # Fall through to create new run
-            initial_mission = mission_service.get_mission()
-            persistence_service.create_initial_run(initial_mission)
+            default_context = session_manager.create_context(DEFAULT_SESSION_ID)
     else:
         # 4. No unfinished run â€” retain Phase 2B behavior
         # Create new run with initial snapshot and audit
-        initial_mission = mission_service.get_mission()
-        persistence_service.create_initial_run(initial_mission)
+        default_context = session_manager.create_context(DEFAULT_SESSION_ID)
+
+    # Preserve existing app.state access for tests by aliasing the default session.
+    app.state.mission_service = default_context.mission_service
+    app.state.telemetry_service = default_context.telemetry_service
+    app.state.forecasting_service = default_context.forecasting_service
+    app.state.anomaly_service = default_context.anomaly_service
+    app.state.strategy_service = default_context.strategy_service
+    app.state.validation_service = default_context.validation_service
+    app.state.approval_service = default_context.approval_service
+    app.state.persistence_service = default_context.persistence_service
 
     # Tests may disable the background loop when they need a stable mission state
     telemetry_task = None
     if not getattr(app.state, "disable_background_telemetry", False):
         telemetry_task = asyncio.create_task(
-            telemetry_loop(telemetry_service, ws_manager, persistence_service)
+            telemetry_loop(session_manager, ws_manager)
         )
     app.state.telemetry_task = telemetry_task
 
